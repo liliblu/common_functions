@@ -24,7 +24,7 @@ def getColumns(df, sample_columns):
     gene_info_columns = list(set(list(df)) - set(sample_columns))
     outlier_columns = [x+'outlier' for x in sample_columns]
 
-    return gene_info_columns, outlier_columns
+    return gene_info_columns
 
 
 def convertToOutliers(df, gene_info_columns, sample_columns, outlier_columns, NUM_IQRs, up_or_down):
@@ -36,30 +36,27 @@ def convertToOutliers(df, gene_info_columns, sample_columns, outlier_columns, NU
     '''
     df['row_iqr'] = scipy.stats.iqr(df[sample_columns], axis=1, nan_policy='omit')
     df['row_median'] = np.nanquantile(df[sample_columns], q=0.5, axis=1)
-    
-    df['row_medPlus%siqr' % NUM_IQRs] = (df['row_median'] + (NUM_IQRs*df['row_iqr']))
-    df['row_medMinus%siqr' % NUM_IQRs] = (df['row_median'] - (NUM_IQRs*df['row_iqr']))
-    
+
+    df['row_medPlus'] = (df['row_median'] + (NUM_IQRs*df['row_iqr']))
+    df['row_medMinus'] = (df['row_median'] - (NUM_IQRs*df['row_iqr']))
+
+    outlier_df[gene_info_columns] = df[gene_info_columns]
+
     if up_or_down == 'up':
-        for column in sample_columns:
-            df.loc[:, (column+'outlier')] = 0
-            df.loc[(df[column] > df['row_medPlus%siqr' % NUM_IQRs]), (column+'outlier')] = 1
-    
+        outlier_df[sample_columns] = df[sample_columns] > df['row_medPlus']
+
     elif up_or_down == 'down':
-        for column in sample_columns:
-            df.loc[:, (column+'outlier')] = 0
-            df.loc[(df[column] < df['row_medMinus%siqr' % NUM_IQRs]), (column+'outlier')] = 1
-            
+        outlier_df[sample_columns] = df[sample_columns] < df['row_medMinus']
+
     elif up_or_down == 'both':
-        for column in sample_columns:
-            df.loc[:, (column+'outlier')] = 0
-            df.loc[(df[column] < df['row_medMinus%siqr' % NUM_IQRs]), (column+'outlier')] = -1
-            df.loc[(df[column] > df['row_medPlus%siqr' % NUM_IQRs]), (column+'outlier')] = 1
+        for column in sample_columns
+            outlier_df.loc[:, sample_columns] = 0
+            outlier_df.loc[(df[column] < df['row_medMinus']), column] = -1
+            outlier_df.loc[(df[column] > df['row_medPlus%siqr']), column] = 1
 
-    outliers = df[gene_info_columns + outlier_columns]
-    outliers.columns = gene_info_columns + [sample[:-7] for sample in outlier_columns]
+    outlier_df[sample_columns] = outlier_df[sample_columns].astype(int)
 
-    return outliers
+    return outlier_df
 
 
 def aggregatePhosphosites(df, isoform_column_name, sample_columns):
@@ -67,7 +64,7 @@ def aggregatePhosphosites(df, isoform_column_name, sample_columns):
     count_df = df.groupby(by=isoform_column_name)['num_psites'].agg(lambda x: len(x)).reset_index(name='counts')
     df = df.groupby(by=isoform_column_name)[sample_columns].agg((lambda x: sum(x)))
     df = df.merge(count_df, how='left', on=isoform_column_name)
-    
+
     return df
 
 if __name__=="__main__":
@@ -79,7 +76,7 @@ if __name__=="__main__":
     parser.add_argument('--output_file', type=str, default='outliers.tsv')
     parser.add_argument('--sample_names_file', type=str, default='sample_roster.txt')
     parser.add_argument('--up_or_down', type=str, choices=['up', 'down', 'both'], default='up')
-    
+
     args = parser.parse_args()
 
     data_input = args.input_df
@@ -89,20 +86,20 @@ if __name__=="__main__":
     NUM_IQRs = args.iqrs_over_median
     sample_names = args.sample_names_file
     up_or_down = args.up_or_down
-    
+
     sample_columns = []
     with open(sample_names, 'r') as names_file:
         for name in names_file.readlines():
             name = name.strip()
             sample_columns.append(name)
-    
+
     sample_data = pd.read_csv(data_input, sep='\t')
 
     sample_data = cleanDF(sample_data, sample_columns)
 
-    gene_info_columns, outlier_columns = getColumns(sample_data, sample_columns)
+    gene_info_columns = getColumns(sample_data, sample_columns)
 
-    outliers = convertToOutliers(sample_data, gene_info_columns, sample_columns, outlier_columns, NUM_IQRs,up_or_down)
+    outliers = convertToOutliers(sample_data, gene_info_columns, sample_columns, NUM_IQRs,up_or_down)
 
     if experiment_type == 'phospho':
         outliers = aggregatePhosphosites(outliers, isoform_column_name, sample_columns)
