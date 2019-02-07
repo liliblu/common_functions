@@ -13,7 +13,7 @@ sns.set(font = 'arial', style = 'white', color_codes=True, font_scale = 1)
 cmap = sns.cubehelix_palette(start=0.857, rot=0.00, gamma=1.5, hue=1, light=1, dark=0.2, reverse=False, as_cmap=True)
 cmap.set_bad('#F5F5F5')
 
-def makeHeatMap(heatmap_table, group_color_map, sample_color_map, output_prefix):
+def makeHeatMap(heatmap_table, group_color_map, sample_color_map, output_prefix, genes_to_highlight=None):
     group = heatmap_table.columns
     column_colors = group.map(sample_color_map)
 
@@ -32,17 +32,29 @@ def makeHeatMap(heatmap_table, group_color_map, sample_color_map, output_prefix)
                           )
     g.ax_row_dendrogram.set_visible(False)
     plt.setp(g.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-    
+
     g.cax.set_position((0.15,0.12,0.03,0.6)) #move colorbar to right
     ax = g.ax_heatmap
     ax.set_ylabel('') #change the gene label
-    
+
 #     this chunk makes the legend the describes the different sample groups
     handles = [mpatches.Patch(color=color, label=group) for group, color in group_color_map.iteritems()]
 
     fig = plt.gcf()
     fig.legend(handles=handles, bbox_to_anchor=(0.6, 0.10))
-    
+
+    if genes_to_highlight != None:
+        new_labels = []
+        for gene in ax.get_yticklabels():
+            gene = gene.get_text()
+
+            if gene in genes_to_highlight:
+                new_labels.append(str(gene)+'*')
+            else:
+                new_labels.append(gene)
+        ax.set_yticklabels(new_labels)
+
+
     #save the plot
     plt.savefig('%s.pdf' %output_prefix, dpi=500, bbox_inches='tight', pad_inches=0.5)
     plt.show()
@@ -80,17 +92,21 @@ if __name__=="__main__":
                         help='List of samples from group 2. Samples separated by new lines, no header')
     parser.add_argument('--group_colors', type=str,
                         help='tsv, no header, with group names in 1st column and colors in 2nd column. Alternatively can map colors directly to samples. Group labels must match group labels given above.')
+    parser.add_argument('--genes_to_highlight', type=str,
+                        default=None,
+                        help='List of genes to highlight with * in y tick labels')
+
 
     args = parser.parse_args()
 
     outliers = pd.read_csv(args.outliers_table, sep='\t')
     experiment_type = args.experiment_type
     count_column_name = args.count_column_name
-    
+
     if experiment_type == 'not_phospho':
         outliers[count_column_name] = 1
-        
-        
+
+
     protein_column_name = args.protein_column_name
     fdr_cut_off = args.fdr_cut_off
 
@@ -102,6 +118,9 @@ if __name__=="__main__":
     group1 = commonFns.fileToList(args.group1_list)
     group2 = commonFns.fileToList(args.group2_list)
 
+    genes_to_highlight = args.genes_to_highlight
+    if genes_to_highlight != None:
+        genes_to_highlight = commonFns.fileToList(genes_to_highlight)
 
 # Assigning colors to samples
     if args.group_colors is not None:
@@ -136,7 +155,10 @@ if __name__=="__main__":
         heatmap_table = outliers.loc[(outliers['significant'] == True), [protein_column_name] + group1 + group2]
         heatmap_table = heatmap_table.set_index(protein_column_name)
 
-        makeHeatMap(heatmap_table, group_color_map, sample_color_map, output_prefix)
+        if genes_to_highlight==None:
+            makeHeatMap(heatmap_table, group_color_map, sample_color_map, output_prefix)
+        else:
+            makeHeatMap(heatmap_table, group_color_map, sample_color_map, output_prefix, genes_to_highlight)
 
 #Write significantly different genes to a file
     if sig_diff_count > 0:

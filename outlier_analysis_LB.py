@@ -27,7 +27,7 @@ def getColumns(df, sample_columns):
     return gene_info_columns
 
 
-def convertToOutliers(df, gene_info_columns, sample_columns, outlier_columns, NUM_IQRs, up_or_down):
+def convertToOutliers(df, gene_info_columns, sample_columns, NUM_IQRs, up_or_down):
     '''
     Calculates the median, and inter-quartile range for each row/isoform.
     Inter-quartile range is defined as the value difference between the 25th and 75th percentile.
@@ -40,6 +40,7 @@ def convertToOutliers(df, gene_info_columns, sample_columns, outlier_columns, NU
     df['row_medPlus'] = (df['row_median'] + (NUM_IQRs*df['row_iqr']))
     df['row_medMinus'] = (df['row_median'] - (NUM_IQRs*df['row_iqr']))
 
+    outlier_df = pd.DataFrame()
     outlier_df[gene_info_columns] = df[gene_info_columns]
 
     if up_or_down == 'up':
