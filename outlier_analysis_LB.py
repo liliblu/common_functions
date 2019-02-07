@@ -51,9 +51,9 @@ def convertToOutliers(df, gene_info_columns, sample_columns, NUM_IQRs, up_or_dow
 
     elif up_or_down == 'both':
         for column in sample_columns
-            outlier_df.loc[:, sample_columns] = 0
+            outlier_df.loc[:, column] = 0
             outlier_df.loc[(df[column] < df['row_medMinus']), column] = -1
-            outlier_df.loc[(df[column] > df['row_medPlus%siqr']), column] = 1
+            outlier_df.loc[(df[column] > df['row_medPlus']), column] = 1
 
     outlier_df[sample_columns] = outlier_df[sample_columns].astype(int)
 
