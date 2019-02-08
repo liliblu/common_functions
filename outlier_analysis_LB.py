@@ -22,7 +22,6 @@ def getColumns(df, sample_columns):
     Also generates a list of outlier names, needed for convertToOutliers.
     '''
     gene_info_columns = list(set(list(df)) - set(sample_columns))
-    outlier_columns = [x+'outlier' for x in sample_columns]
 
     return gene_info_columns
 
@@ -42,20 +41,23 @@ def convertToOutliers(df, gene_info_columns, sample_columns, NUM_IQRs, up_or_dow
 
     outlier_df = pd.DataFrame()
     outlier_df[gene_info_columns] = df[gene_info_columns]
+    outlier_df = outlier_df.assign(**{col:0 for col in sample_columns})
 
     if up_or_down == 'up':
-        outlier_df[sample_columns] = df[sample_columns] > df['row_medPlus']
+        for col in sample_columns:
+            outlier_df.loc[(df[col] > df['row_medPlus']), col] = 1
+            outlier_df.loc[(df[col].isnull()), col] = np.nan
 
     elif up_or_down == 'down':
-        outlier_df[sample_columns] = df[sample_columns] < df['row_medMinus']
+        for col in sample_columns:
+            outlier_df.loc[(df[col] > df['row_medPlus']), col] = 1
+            outlier_df.loc[(df[col].isnull()), col] = np.nan
 
     elif up_or_down == 'both':
-        for column in sample_columns
-            outlier_df.loc[:, column] = 0
-            outlier_df.loc[(df[column] < df['row_medMinus']), column] = -1
-            outlier_df.loc[(df[column] > df['row_medPlus']), column] = 1
-
-    outlier_df[sample_columns] = outlier_df[sample_columns].astype(int)
+        for col in sample_columns:
+            outlier_df.loc[(df[col] > df['row_medPlus']), col] = 1
+            outlier_df.loc[(df[col] < df['row_medMinus']), col] = -1
+            outlier_df.loc[(df[col].isnull()), col] = np.nan
 
     return outlier_df
 
@@ -100,7 +102,7 @@ if __name__=="__main__":
 
     gene_info_columns = getColumns(sample_data, sample_columns)
 
-    outliers = convertToOutliers(sample_data, gene_info_columns, sample_columns, NUM_IQRs,up_or_down)
+    outliers = convertToOutliers(sample_data, gene_info_columns, sample_columns, NUM_IQRs, up_or_down)
 
     if experiment_type == 'phospho':
         outliers = aggregatePhosphosites(outliers, isoform_column_name, sample_columns)
