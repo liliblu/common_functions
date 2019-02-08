@@ -6,29 +6,90 @@ import sys
 import argparse
 from datetime import datetime
 
-sys.path.insert(0, "/Users/lili/Google Drive/Ruggles_lab/common_functions")
-import commonFns
-
 sns.set(font = 'arial', style = 'white', color_codes=True, font_scale = 1)
 cmap = sns.cubehelix_palette(start=0.857, rot=0.00, gamma=1.5, hue=1, light=1, dark=0.2, reverse=False, as_cmap=True)
 cmap.set_bad('#F5F5F5')
+
+def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-Hochberg"):
+    """
+    consistent with R - print correct_pvalues_for_multiple_testing([0.0, 0.01, 0.029, 0.03, 0.031, 0.05, 0.069, 0.07, 0.071, 0.09, 0.1])
+    """
+    from numpy import array, empty
+    pvalues = array(pvalues)
+    n = len(pvalues)
+    new_pvalues = empty(n)
+    if correction_type == "Bonferroni":
+        new_pvalues = n * pvalues
+    elif correction_type == "Bonferroni-Holm":
+        values = [ (pvalue, i) for i, pvalue in enumerate(pvalues) ]
+        values.sort()
+        for rank, vals in enumerate(values):
+            pvalue, i = vals
+            new_pvalues[i] = (n-rank) * pvalue
+    elif correction_type == "Benjamini-Hochberg":
+        values = [ (pvalue, i) for i, pvalue in enumerate(pvalues) ]
+        values.sort()
+        values.reverse()
+        new_values = []
+        for i, vals in enumerate(values):
+            rank = n - i
+            pvalue, index = vals
+            new_values.append((n/rank) * pvalue)
+        for i in xrange(0, int(n)-1):
+            if new_values[i] < new_values[i+1]:
+                new_values[i+1] = new_values[i]
+        for i, vals in enumerate(values):
+            pvalue, index = vals
+            new_pvalues[index] = new_values[i]
+    return new_pvalues
+
+
+def testDifferentGroupsOutliers(sample_set1, sample_set2, outlier_table, psite_count_column='counts'):
+
+    outlier_table['Outlier1'] = outlier_table[sample_set1].sum(axis=1)
+    outlier_table['NotOutlier1'] = ((outlier_table[psite_count_column]*len(sample_set1)) - outlier_table['Outlier1'])
+
+    outlier_table['Outlier2'] = outlier_table[sample_set2].sum(axis=1)
+    outlier_table['NotOutlier2'] = ((outlier_table[psite_count_column]*len(sample_set2)) - outlier_table['Outlier2'])
+
+    outlier_table['fisherp'] = outlier_table.apply((lambda r: scipy.stats.fisher_exact([[r['Outlier1'],
+                                                                                     r['Outlier2']],
+                                                                                    [r['NotOutlier1'],
+                                                                                     r['NotOutlier2']]])[1]),axis=1)
+
+    outlier_table['fisherFDR'] = correct_pvalues_for_multiple_testing(list(outlier_table['fisherp']),
+                                     correction_type = "Benjamini-Hochberg")
+
+    return outlier_table['fisherFDR']
+
+def fileToList(group_list):
+    group = []
+    with open(group_list, 'r') as fh:
+        for line in fh.readlines():
+            group.append(line.strip())
+
+    return group
+
+def fileToDict(tsv_map_file_name):
+    map = dict()
+    with open(tsv_map_file_name, 'r') as fh:
+        for line in fh.readlines():
+            map[line.split()[0]] = line.split()[1]
+    return map
 
 def makeHeatMap(heatmap_table, group_color_map, sample_color_map, output_prefix, genes_to_highlight=None):
     group = heatmap_table.columns
     column_colors = group.map(sample_color_map)
 
     g = sns.clustermap(heatmap_table,
-                           cmap=cmap,
-                           col_cluster = False,
-                           # row_cluster = False,
-                           col_colors = column_colors,
-                           xticklabels=False,
-#                            yticklabels=False,
-                        # standard_scale=0,
-                        vmin=0,
+                       cmap=cmap,
+                       col_cluster = False,
+                       col_colors = column_colors,
+                       xticklabels=False,
+                       vmin=0,
 #                         vmax=np.percentile(heatmap_table.values, 99.9),
-                        vmax=30,
-                           cbar_kws={'label':'# outliers'},
+                       vmax=30,
+                       cbar_kws={'label':'# outliers'},
                           )
     g.ax_row_dendrogram.set_visible(False)
     plt.setp(g.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
@@ -115,16 +176,16 @@ if __name__=="__main__":
     group1_label = args.group1_label
     group2_label = args.group2_label
 
-    group1 = commonFns.fileToList(args.group1_list)
-    group2 = commonFns.fileToList(args.group2_list)
+    group1 = fileToList(args.group1_list)
+    group2 = fileToList(args.group2_list)
 
     genes_to_highlight = args.genes_to_highlight
     if genes_to_highlight != None:
-        genes_to_highlight = commonFns.fileToList(genes_to_highlight)
+        genes_to_highlight = fileToList(genes_to_highlight)
 
 # Assigning colors to samples
     if args.group_colors is not None:
-        group_color_map = commonFns.fileToDict(group_colors)
+        group_color_map = fileToDict(group_colors)
 
         groups_dict = {sample:group1_label for sample in group1}
         groups_dict2 = {sample:group2_label for sample in group2}
@@ -140,11 +201,10 @@ if __name__=="__main__":
 
 
 # Doing statistical test on different groups
-    outliers['FDR'] = commonFns.testDifferentGroupsOutliers(group1,
-                                                            group2,
-                                                            outliers,
-                                                            psite_count_column=count_column_name,
-                                                            phospho=(experiment_type=='phospho'))
+    outliers['FDR'] = testDifferentGroupsOutliers(group1,
+                                                  group2,
+                                                  outliers,
+                                                  count_column_name)
 
     outliers['significant'] = (outliers['FDR'] <= fdr_cut_off)
     sig_diff_count = sum(outliers['significant'])
