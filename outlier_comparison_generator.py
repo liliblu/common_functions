@@ -85,7 +85,7 @@ def makeHeatMap(heatmap_table, group_color_map, sample_color_map, group1, output
     heatmap_table = heatmap_table.sort_values('mean_group1')
     heatmap_table = heatmap_table.drop('mean_group1', axis=1)
 
-    # cmap=sns.cubehelix_palette(start=3, rot=0.00, gamma=1.5, hue=1, light=1, dark=0.2, reverse=False, as_cmap=True)
+#     cmap=sns.cubehelix_palette(start=3, rot=0.00, gamma=1.5, hue=1, light=1, dark=0.2, reverse=False, as_cmap=True)
 
     g = sns.clustermap(heatmap_table,
                        cmap=cmap,

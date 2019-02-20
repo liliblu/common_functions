@@ -50,7 +50,7 @@ def convertToOutliers(df, gene_info_columns, sample_columns, NUM_IQRs, up_or_dow
 
     elif up_or_down == 'down':
         for col in sample_columns:
-            outlier_df.loc[(df[col] > df['row_medPlus']), col] = 1
+            outlier_df.loc[(df[col] < df['row_medMinus']), col] = 1
             outlier_df.loc[(df[col].isnull()), col] = np.nan
 
     elif up_or_down == 'both':
