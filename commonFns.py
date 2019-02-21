@@ -14,10 +14,12 @@ def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-H
     """
     from numpy import array, empty
     pvalues = array(pvalues)
-    n = len(pvalues)
-    new_pvalues = empty(n)
+    n = sum(~np.isnan(pvalues))
+    new_pvalues = empty(len(pvalues))
+
     if correction_type == "Bonferroni":
         new_pvalues = n * pvalues
+
     elif correction_type == "Bonferroni-Holm":
         values = [ (pvalue, i) for i, pvalue in enumerate(pvalues) ]
         values.sort()
@@ -39,6 +41,11 @@ def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-H
         for i, vals in enumerate(values):
             pvalue, index = vals
             new_pvalues[index] = new_values[i]
+
+    for i, val in enumerate(new_pvalues):
+        if val != np.nan:
+            new_pvalues[i] = min(1, val)
+
     return new_pvalues
 
 
@@ -154,15 +161,15 @@ def compareOutliers(row, order, fraction):
     quartile_length = int(len(order)*fraction)
     top_quartile = row[order[0:quartile_length]]
     bottom_quartile = row[order[-quartile_length:]]
-    
+
     top_outliers = top_quartile.sum()
     top_not_outliers = (row['counts']*quartile_length*2) - top_outliers
-    
+
     bottom_outliers = bottom_quartile.sum()
     bottom_not_outliers = (row['counts']*quartile_length*2) - bottom_outliers
-    
+
     fisher_pval = scipy.stats.fisher_exact(np.array([[top_outliers, top_not_outliers], [bottom_outliers, bottom_not_outliers]]))[1]
-    
+
     return fisher_pval
 
 
