@@ -22,12 +22,15 @@ def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-H
 
     elif correction_type == "Bonferroni-Holm":
         values = [ (pvalue, i) for i, pvalue in enumerate(pvalues) ]
+        values = [x for x in values if ~np.isnan(x[0])]
         values.sort()
         for rank, vals in enumerate(values):
             pvalue, i = vals
             new_pvalues[i] = (n-rank) * pvalue
     elif correction_type == "Benjamini-Hochberg":
+
         values = [ (pvalue, i) for i, pvalue in enumerate(pvalues) ]
+        values = [x for x in values if ~np.isnan(x[0])]
         values.sort()
         values.reverse()
         new_values = []
@@ -42,8 +45,9 @@ def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-H
             pvalue, index = vals
             new_pvalues[index] = new_values[i]
 
+    new_pvalues[np.isnan(pvalues)] = np.nan
     for i, val in enumerate(new_pvalues):
-        if val != np.nan:
+        if ~np.isnan(val):
             new_pvalues[i] = min(1, val)
 
     return new_pvalues
