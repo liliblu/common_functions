@@ -19,16 +19,19 @@ def normRank(score_vector):
 # for a vector of normalized ranks, return the betaScore vector, and minimum score (rho)
 def betaScore_rho_p(rank_vector):
     """
-    Compares each element in the vector to its corresponding value in the null distribution vector, using the probability mass function of the binomial distribution
+    Compares each element in the vector to its corresponding value in the null distribution vector,
+    using the probability mass function of the binomial distribution.
     Assigns a p-value to each element in the vector, creating the betaScore vector.
     Uses minimum betaScore as rho
     """
+
+    rank_vector = rank_vector.dropna()
     n = len(rank_vector)
 
     betaScores = rank_vector.copy(deep=True)
     betaScores[0:n] = np.nan
 
-    sorted_ranks = rank_vector.sort_values().index
+    sorted_ranks = rank_vector.dropna().sort_values().index
 
     for i, k in enumerate(sorted_ranks):
 
