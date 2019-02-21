@@ -183,8 +183,8 @@ if __name__=="__main__":
     group1_label = args.group1_label
     group2_label = args.group2_label
 
-    group1 = fileToList(args.group1_list)
-    group2 = fileToList(args.group2_list)
+    group1 = [x for x in fileToList(args.group1_list) if x in outliers.columns]
+    group2 = [x for x in fileToList(args.group2_list) if x in outliers.columns]
 
     genes_to_highlight = args.genes_to_highlight
     if genes_to_highlight != None:
