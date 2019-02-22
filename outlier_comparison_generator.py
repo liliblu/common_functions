@@ -10,6 +10,20 @@ sns.set(font = 'arial', style = 'white', color_codes=True, font_scale = 1)
 cmap = sns.cubehelix_palette(start=0.857, rot=0.00, gamma=1.5, hue=1, light=1, dark=0.2, reverse=False, as_cmap=True)
 cmap.set_bad('#F5F5F5')
 
+def fileToList(group_list):
+    group = []
+    with open(group_list, 'r') as fh:
+        for line in fh.readlines():
+            group.append(line.strip())
+    return group
+
+def fileToDict(tsv_map_file_name):
+    map = dict()
+    with open(tsv_map_file_name, 'r') as fh:
+        for line in fh.readlines():
+            map[line.split()[0]] = line.split()[1]
+    return map
+
 def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-Hochberg"):
     """
     consistent with R - print correct_pvalues_for_multiple_testing([0.0, 0.01, 0.029, 0.03, 0.031, 0.05, 0.069, 0.07, 0.071, 0.09, 0.1])
@@ -43,6 +57,11 @@ def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-H
             new_pvalues[index] = new_values[i]
     return new_pvalues
 
+def filterOutliers(df, group_list):
+    min_num_outlier_samps = int(len(group_list)*0.3)
+    num_outlier_samps = (df[group_list] > 0).sum(axis=1)
+    df = df.loc[num_outlier_samps > min_num_outlier_samps, :].reset_index(drop=True)
+    return df
 
 def testDifferentGroupsOutliers(sample_set1, sample_set2, outlier_table, psite_count_column='counts'):
 
@@ -59,23 +78,7 @@ def testDifferentGroupsOutliers(sample_set1, sample_set2, outlier_table, psite_c
 
     outlier_table['fisherFDR'] = correct_pvalues_for_multiple_testing(list(outlier_table['fisherp']),
                                      correction_type = "Benjamini-Hochberg")
-
     return outlier_table['fisherFDR']
-
-def fileToList(group_list):
-    group = []
-    with open(group_list, 'r') as fh:
-        for line in fh.readlines():
-            group.append(line.strip())
-
-    return group
-
-def fileToDict(tsv_map_file_name):
-    map = dict()
-    with open(tsv_map_file_name, 'r') as fh:
-        for line in fh.readlines():
-            map[line.split()[0]] = line.split()[1]
-    return map
 
 def makeHeatMap(heatmap_table, group_color_map, sample_color_map, group1, output_prefix, genes_to_highlight=None):
     group = heatmap_table.columns
@@ -122,8 +125,7 @@ def makeHeatMap(heatmap_table, group_color_map, sample_color_map, group1, output
                 new_labels.append(gene)
         ax.set_yticklabels(new_labels)
 
-
-    #save the plot
+    #save and show the plot
     plt.savefig('%s.pdf' %output_prefix, dpi=500, bbox_inches='tight', pad_inches=0.5)
     plt.show()
     plt.close()
@@ -174,7 +176,6 @@ if __name__=="__main__":
     if experiment_type == 'not_phospho':
         outliers[count_column_name] = 1
 
-
     protein_column_name = args.protein_column_name
     fdr_cut_off = args.fdr_cut_off
 
@@ -206,6 +207,11 @@ if __name__=="__main__":
 
         group_color_map = {group1_label:'#571D41', group2_label:'#F5F5F5'}
 
+# Filter for multiple samples with outliers in group1_list
+    outliers = filterOutliers(outliers, group1)
+    if len(outliers) == 0:
+        print("No rows have outliers in 0.3 of %s samples" % (group1_label))
+        sys.exit()
 
 # Doing statistical test on different groups
     outliers['FDR'] = testDifferentGroupsOutliers(group1,
