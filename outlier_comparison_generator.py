@@ -24,7 +24,7 @@ def fileToDict(tsv_map_file_name):
             map[line.split()[0]] = line.split()[1]
     return map
 
-def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-Hochberg"):
+def correct_pvalues_for_multiple_testing(pvalues, correction_type="Benjamini-Hochberg"):
     """
     consistent with R - print correct_pvalues_for_multiple_testing([0.0, 0.01, 0.029, 0.03, 0.031, 0.05, 0.069, 0.07, 0.071, 0.09, 0.1])
     """
@@ -57,13 +57,31 @@ def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-H
             new_pvalues[index] = new_values[i]
     return new_pvalues
 
+def assignColors(group_colors, group1_label, group2_label, group1, group2):
+    if group_colors is not None:
+        group_color_map = fileToDict(group_colors)
+
+        groups_dict = {sample:group1_label for sample in group1}
+        groups_dict2 = {sample:group2_label for sample in group2}
+        groups_dict.update(groups_dict2)
+
+        sample_color_map = {sample:group_color_map[groups_dict[sample]] for sample in group1+group2}
+
+    else:
+        sample_color_map = {sample:'#571D41' for sample in group1}
+        sample_color_map.update({sample:'#F5F5F5' for sample in group2})
+
+        group_color_map = {group1_label:'#571D41', group2_label:'#F5F5F5'}
+    return group_color_map, sample_color_map
+
 def filterOutliers(df, group_list):
     min_num_outlier_samps = int(len(group_list)*0.3)
     num_outlier_samps = (df[group_list] > 0).sum(axis=1)
     df = df.loc[num_outlier_samps > min_num_outlier_samps, :].reset_index(drop=True)
     return df
 
-def testDifferentGroupsOutliers(sample_set1, sample_set2, outlier_table, psite_count_column='counts'):
+def testDifferentGroupsOutliers(sample_set1, sample_set2,
+                                outlier_table, psite_count_column='counts'):
 
     outlier_table['Outlier1'] = outlier_table[sample_set1].sum(axis=1)
     outlier_table['NotOutlier1'] = ((outlier_table[psite_count_column]*len(sample_set1)) - outlier_table['Outlier1'])
@@ -80,7 +98,10 @@ def testDifferentGroupsOutliers(sample_set1, sample_set2, outlier_table, psite_c
                                      correction_type = "Benjamini-Hochberg")
     return outlier_table['fisherFDR']
 
-def makeHeatMap(heatmap_table, group_color_map, sample_color_map, group1, output_prefix, genes_to_highlight=None):
+def makeHeatMap(heatmap_table, group_color_map,
+                sample_color_map, group1,
+                output_prefix, genes_to_highlight=None):
+
     group = heatmap_table.columns
     column_colors = group.map(sample_color_map)
 
@@ -172,40 +193,21 @@ if __name__=="__main__":
     outliers = pd.read_csv(args.outliers_table, sep='\t')
     experiment_type = args.experiment_type
     count_column_name = args.count_column_name
-
     if experiment_type == 'not_phospho':
         outliers[count_column_name] = 1
-
     protein_column_name = args.protein_column_name
     fdr_cut_off = args.fdr_cut_off
-
     output_prefix = args.output_prefix
-
     group1_label = args.group1_label
     group2_label = args.group2_label
-
     group1 = [x for x in fileToList(args.group1_list) if x in outliers.columns]
     group2 = [x for x in fileToList(args.group2_list) if x in outliers.columns]
-
     genes_to_highlight = args.genes_to_highlight
     if genes_to_highlight != None:
         genes_to_highlight = fileToList(genes_to_highlight)
 
 # Assigning colors to samples
-    if args.group_colors is not None:
-        group_color_map = fileToDict(group_colors)
-
-        groups_dict = {sample:group1_label for sample in group1}
-        groups_dict2 = {sample:group2_label for sample in group2}
-        groups_dict.update(groups_dict2)
-
-        sample_color_map = {sample:group_color_map[groups_dict[sample]] for sample in group1+group2}
-
-    else:
-        sample_color_map = {sample:'#571D41' for sample in group1}
-        sample_color_map.update({sample:'#F5F5F5' for sample in group2})
-
-        group_color_map = {group1_label:'#571D41', group2_label:'#F5F5F5'}
+    group_color_map, sample_color_map = assignColors(args.group_colors, group1_label, group2_label, group1, group2)
 
 # Filter for multiple samples with outliers in group1_list
     outliers = filterOutliers(outliers, group1)
@@ -228,19 +230,19 @@ if __name__=="__main__":
         heatmap_table = outliers.loc[(outliers['significant'] == True), [protein_column_name] + group1 + group2]
         heatmap_table = heatmap_table.set_index(protein_column_name)
 
-        if genes_to_highlight==None:
-            makeHeatMap(heatmap_table, group_color_map, sample_color_map, group1, output_prefix)
-        else:
-            makeHeatMap(heatmap_table, group_color_map, sample_color_map, group1, output_prefix, genes_to_highlight)
+        makeHeatMap(heatmap_table, group_color_map, sample_color_map, group1, output_prefix, genes_to_highlight)
 
 #Write significantly different genes to a file
-    if sig_diff_count > 0:
-        up_in_group1 = outliers.loc[((outliers['significant']==True) & (outliers[group1].sum(axis=1) > outliers[group2].sum(axis=1))), protein_column_name]
+    up_in_group1 = outliers.loc[((outliers['significant']==True) &
+                                (outliers[group1].sum(axis=1) > outliers[group2].sum(axis=1))), protein_column_name]
+    if len(up_in_group1) > 0:
         with open('%s.up_in_%s.txt' %(output_prefix, group1_label), 'w') as fh:
             for gene in up_in_group1:
                 fh.write('%s\n'%gene)
 
-        up_in_group2 = outliers.loc[((outliers['significant']==True) & (outliers[group1].sum(axis=1) < outliers[group2].sum(axis=1))), protein_column_name]
+    up_in_group2 = outliers.loc[((outliers['significant']==True) &
+                                (outliers[group1].sum(axis=1) < outliers[group2].sum(axis=1))), protein_column_name]
+    if len(up_in_group2) > 0:
         with open('%s.up_in_%s.txt' %(output_prefix, group2_label), 'w') as fh:
             for gene in up_in_group2:
                 fh.write('%s\n'%gene)
