@@ -6,11 +6,6 @@ import sys
 import argparse
 from datetime import datetime
 
-sns.set(font = 'arial', style = 'white', color_codes=True, font_scale = 1)
-cmap = sns.cubehelix_palette(start=0.857, rot=0.00, gamma=1.5, hue=1,
-                            light=1, dark=0.2, reverse=False, as_cmap=True)
-cmap.set_bad('#F5F5F5')
-
 def fileToList(group_list):
     group = []
     with open(group_list, 'r') as fh:
@@ -105,18 +100,30 @@ def testDifferentGroupsOutliers(group1_list, group2_list, outlier_table):
                                      correction_type = "Benjamini-Hochberg")
     return outlier_table['fisherFDR']
 
-def makeHeatMap(heatmap_table, group_color_map,sample_color_map, group1, output_prefix, genes_to_highlight=None):
+def makeHeatMap(heatmap_table, group_color_map,sample_color_map, group1,
+                output_prefix, blue_or_red, genes_to_highlight=None):
 
+    # Set up colors for heatmap
+    sns.set(font = 'arial', style = 'white', color_codes=True, font_scale = 1)
+    if blue_or_red == 'red':
+        cmap = sns.cubehelix_palette(start=0.857, rot=0.00, gamma=1.5, hue=1,
+                                    light=1, dark=0.2, reverse=False, as_cmap=True)
+    elif blue_or_red=='blue':
+        cmap=sns.cubehelix_palette(start=3, rot=0.00, gamma=1.5, hue=1,
+                                    light=1, dark=0.2, reverse=False, as_cmap=True)
+    cmap.set_bad('#F5F5F5')
+
+    # Set up colors for columns
     heatmap_table.columns = [x.split('_')[0] for x in heatmap_table.columns]
     group = heatmap_table.columns
     column_colors = group.map(sample_color_map)
 
+    # Sort the table
     heatmap_table['mean_group1'] = heatmap_table.loc[:, group1].mean(axis=1)
     heatmap_table = heatmap_table.sort_values('mean_group1')
     heatmap_table = heatmap_table.drop('mean_group1', axis=1)
 
-    # cmap=sns.cubehelix_palette(start=3, rot=0.00, gamma=1.5, hue=1, light=1, dark=0.2, reverse=False, as_cmap=True)
-
+    # Make heatmap
     g = sns.clustermap(heatmap_table,
                        cmap=cmap,
                        col_cluster = False,
@@ -136,12 +143,13 @@ def makeHeatMap(heatmap_table, group_color_map,sample_color_map, group1, output_
     ax = g.ax_heatmap
     ax.set_ylabel('') #change the gene label
 
-#     this chunk makes the legend the describes the different sample groups
+    # Make the legend the describes the different sample groups
     handles = [mpatches.Patch(color=color, label=group) for group, color in group_color_map.iteritems()]
 
     fig = plt.gcf()
     fig.legend(handles=handles, bbox_to_anchor=(0.6, 0.10))
 
+    # Star genes to highlight on heatmap
     if genes_to_highlight != None:
         new_labels = []
         for gene in ax.get_yticklabels():
@@ -153,7 +161,7 @@ def makeHeatMap(heatmap_table, group_color_map,sample_color_map, group1, output_
                 new_labels.append(gene)
         ax.set_yticklabels(new_labels)
 
-    #save and show the plot
+    # Save and show the plot
     plt.savefig('%s.pdf' %output_prefix, dpi=500, bbox_inches='tight', pad_inches=0.5)
     plt.show()
     plt.close()
@@ -181,6 +189,8 @@ if __name__=="__main__":
                         help='tsv, no header, with group names in 1st column and colors in 2nd column. Alternatively can map colors directly to samples. Group labels must match group labels given above.')
     parser.add_argument('--genes_to_highlight', type=str, default=None,
                         help='List of genes to highlight with * in y tick labels')
+    parser.add_argument('--blue_or_red', type=str, default='red',
+                        help='Color scale for heatmap')
 
 
     args = parser.parse_args()
@@ -196,6 +206,7 @@ if __name__=="__main__":
     genes_to_highlight = args.genes_to_highlight
     if genes_to_highlight != None:
         genes_to_highlight = fileToList(genes_to_highlight)
+    blue_or_red = args.blue_or_red
 
 # Assigning colors to samples
     group_color_map, sample_color_map = assignColors(args.group_colors, group1_label, group2_label, group1, group2)
@@ -222,7 +233,8 @@ if __name__=="__main__":
         heatmap_table = outliers.loc[(outliers['significant'] == True), [gene_column_name] + outlier_columns]
         heatmap_table = heatmap_table.set_index(gene_column_name)
 
-        makeHeatMap(heatmap_table, group_color_map, sample_color_map, group1, output_prefix, genes_to_highlight)
+        makeHeatMap(heatmap_table, group_color_map, sample_color_map, group1,
+                    output_prefix, blue_or_red, genes_to_highlight)
 
 #Write significantly different genes to a file
     outliers.columns = [x.split('_')[0] for x in outliers.columns]
