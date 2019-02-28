@@ -7,18 +7,12 @@ import argparse
 from datetime import datetime
 
 def fileToList(group_list):
-    group = []
     with open(group_list, 'r') as fh:
-        for line in fh.readlines():
-            group.append(line.strip())
-    return group
+        return [line.strip() for line in fh.readlines()]
 
 def fileToDict(tsv_map_file_name):
-    map = dict()
     with open(tsv_map_file_name, 'r') as fh:
-        for line in fh.readlines():
-            map[line.split()[0]] = line.split()[1]
-    return map
+        return {line.split()[0]:line.split()[1] for line in fh.readlines()}
 
 def correct_pvalues_for_multiple_testing(pvalues, correction_type="Benjamini-Hochberg"):
 
@@ -68,12 +62,29 @@ def assignColors(group_colors, group1_label, group2_label, group1, group2):
         group_color_map = {group1_label:'#571D41', group2_label:'#F5F5F5'}
     return group_color_map, sample_color_map
 
-def filterOutliers(df, group_list):
+def filterOutliers(df, group1_list, group2_list):
 
-    min_num_outlier_samps = int(len(group_list)*0.3)
-    group_list = [x+'_outliers' for x in group_list]
-    num_outlier_samps = (df[group_list] > 0).sum(axis=1)
+    min_num_outlier_samps = int(len(group1_list)*0.3)
+    group1_outliers = [x+'_outliers' for x in group1_list]
+    group1_notOutliers = [x+'_notOutliers' for x in group1_list]
+    group2_outliers = [x+'_outliers' for x in group2_list]
+    group2_notOutliers = [x+'_notOutliers' for x in group2_list]
+
+    # Filter for 30% of samples having outliers in group1
+    num_outlier_samps = (df[group1_outliers] > 0).sum(axis=1)
     df = df.loc[num_outlier_samps > min_num_outlier_samps, :].reset_index(drop=True)
+
+    # Filter for higher proportion of outliers in group1 than group2
+    num_total_psites = pd.DataFrame()
+    for i, col in enumerate(group1_list):
+        num_total_psites[col] = df[group1_outliers[i]] + df[group1_notOutliers[i]]
+    for i, col in enumerate(group2_list):
+        num_total_psites[col] = df[group2_outliers[i]] + df[group2_notOutliers[i]]
+
+    num_total_psites.columns = [x+'_outliers' for x in num_total_psites.columns]
+    frac_outliers = df[group1_outliers+group2_outliers] / num_total_psites
+
+    df = df.loc[frac_outliers[group1_outliers].mean(axis=1) > frac_outliers[group2_outliers].mean(axis=1), :]
     return df
 
 def testDifferentGroupsOutliers(group1_list, group2_list, outlier_table):
@@ -209,7 +220,7 @@ if __name__=="__main__":
     group_color_map, sample_color_map = assignColors(args.group_colors, group1_label, group2_label, group1, group2)
 
 # Filter for multiple samples with outliers in group1_list
-    outliers = filterOutliers(outliers, group1)
+    outliers = filterOutliers(outliers, group1, group2)
     if len(outliers) == 0:
         print("No rows have outliers in 0.3 of %s samples" % (group1_label))
         sys.exit()
@@ -232,17 +243,8 @@ if __name__=="__main__":
                     output_prefix, blue_or_red, genes_to_highlight)
 
 #Write significantly different genes to a file
-    outliers.columns = [x.split('_')[0] for x in outliers.columns]
-    up_in_group1 = outliers.loc[((outliers['significant']==True) &
-                                (outliers[group1].sum(axis=1) > outliers[group2].sum(axis=1))), gene_column_name]
-    if len(up_in_group1) > 0:
-        with open('%s.up_in_%s.txt' %(output_prefix, group1_label), 'w') as fh:
-            for gene in up_in_group1:
-                fh.write('%s\n'%gene)
-
-    up_in_group2 = outliers.loc[((outliers['significant']==True) &
-                                (outliers[group1].sum(axis=1) < outliers[group2].sum(axis=1))), gene_column_name]
-    if len(up_in_group2) > 0:
-        with open('%s.up_in_%s.txt' %(output_prefix, group2_label), 'w') as fh:
-            for gene in up_in_group2:
+    sig_genes = outliers.loc[(outliers['significant']==True), gene_column_name]
+    if len(sig_genes) > 0:
+        with open('%s.outlier_sites_in_%s.txt' %(output_prefix, group1_label), 'w') as fh:
+            for gene in sig_genes:
                 fh.write('%s\n'%gene)
