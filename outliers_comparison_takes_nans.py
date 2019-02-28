@@ -62,7 +62,7 @@ def assignColors(group_colors, group1_label, group2_label, group1, group2):
         group_color_map = {group1_label:'#571D41', group2_label:'#F5F5F5'}
     return group_color_map, sample_color_map
 
-def filterOutliers(df, group1_list, group2_list):
+def filterOutliers(df, group1_list, group2_list, gene_column_name):
 
     min_num_outlier_samps = int(len(group1_list)*0.3)
     group1_outliers = [x+'_outliers' for x in group1_list]
@@ -83,9 +83,11 @@ def filterOutliers(df, group1_list, group2_list):
 
     num_total_psites.columns = [x+'_outliers' for x in num_total_psites.columns]
     frac_outliers = df[group1_outliers+group2_outliers] / num_total_psites
+    frac_outliers[gene_column_name] = df[gene_column_name]
 
     df = df.loc[frac_outliers[group1_outliers].mean(axis=1) > frac_outliers[group2_outliers].mean(axis=1), :]
-    return df
+    frac_outliers = frac_outliers.loc[frac_outliers[group1_outliers].mean(axis=1) > frac_outliers[group2_outliers].mean(axis=1), :]
+    return df, frac_outliers
 
 def testDifferentGroupsOutliers(group1_list, group2_list, outlier_table):
 
@@ -140,9 +142,8 @@ def makeHeatMap(heatmap_table, group_color_map,sample_color_map, group1,
                        col_colors = column_colors,
                        xticklabels=False,
                        vmin=0,
-#                         vmax=np.percentile(heatmap_table.values, 99.9),
-                       vmax=10,
-                       cbar_kws={'label':'# outliers'},
+                       vmax=1,
+                       cbar_kws={'label':'fraction outliers'},
                        # figsize=(0.1*len(list(heatmap_table)), 0.05*len(heatmap_table))
                           )
     g.ax_row_dendrogram.set_visible(False)
@@ -220,7 +221,7 @@ if __name__=="__main__":
     group_color_map, sample_color_map = assignColors(args.group_colors, group1_label, group2_label, group1, group2)
 
 # Filter for multiple samples with outliers in group1_list
-    outliers = filterOutliers(outliers, group1, group2)
+    outliers, frac_outliers = filterOutliers(outliers, group1, group2, gene_column_name)
     if len(outliers) == 0:
         print("No rows have outliers in 0.3 of %s samples" % (group1_label))
         sys.exit()
@@ -236,7 +237,7 @@ if __name__=="__main__":
     if sig_diff_count >= 2:
         outlier_columns = [x+'_outliers' for x in group1]
         outlier_columns.extend([x+'_outliers' for x in group2])
-        heatmap_table = outliers.loc[(outliers['significant'] == True), [gene_column_name] + outlier_columns]
+        heatmap_table = frac_outliers.loc[(outliers['significant'] == True), [gene_column_name] + outlier_columns]
         heatmap_table = heatmap_table.set_index(gene_column_name)
 
         makeHeatMap(heatmap_table, group_color_map, sample_color_map, group1,
