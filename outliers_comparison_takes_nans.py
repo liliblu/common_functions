@@ -21,9 +21,7 @@ def fileToDict(tsv_map_file_name):
     return map
 
 def correct_pvalues_for_multiple_testing(pvalues, correction_type="Benjamini-Hochberg"):
-    """
-    consistent with R - print correct_pvalues_for_multiple_testing([0.0, 0.01, 0.029, 0.03, 0.031, 0.05, 0.069, 0.07, 0.071, 0.09, 0.1])
-    """
+
     from numpy import array, empty
     pvalues = array(pvalues)
     n = len(pvalues)
@@ -154,7 +152,6 @@ def makeHeatMap(heatmap_table, group_color_map,sample_color_map, group1,
         new_labels = []
         for gene in ax.get_yticklabels():
             gene = gene.get_text()
-
             if gene in genes_to_highlight:
                 new_labels.append(str(gene)+'*')
             else:
@@ -218,9 +215,7 @@ if __name__=="__main__":
         sys.exit()
 
 # Doing statistical test on different groups
-    outliers['FDR'] = testDifferentGroupsOutliers(group1,
-                                                  group2,
-                                                  outliers)
+    outliers['FDR'] = testDifferentGroupsOutliers(group1, group2, outliers)
 
     outliers['significant'] = (outliers['FDR'] <= fdr_cut_off)
     sig_diff_count = sum(outliers['significant'])

@@ -52,33 +52,6 @@ def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-H
 
     return new_pvalues
 
-
-def testDifferentGroupsOutliers(sample_set1, sample_set2, outlier_table, psite_count_column='counts', phospho=True):
-
-    if phospho == True:
-        outlier_table['Outlier1'] = outlier_table[sample_set1].sum(axis=1)
-        outlier_table['NotOutlier1'] = ((outlier_table[psite_count_column]*len(sample_set1)) - outlier_table['Outlier1'])
-
-        outlier_table['Outlier2'] = outlier_table[sample_set2].sum(axis=1)
-        outlier_table['NotOutlier2'] = ((outlier_table[psite_count_column]*len(sample_set2)) - outlier_table['Outlier2'])
-    elif phospho == False:
-        outlier_table['Outlier1'] = (outlier_table[sample_set1] > 0).sum(axis=1)
-        outlier_table['NotOutlier1'] = (outlier_table[sample_set1] == 0).sum(axis=1)
-
-        outlier_table['Outlier2'] = (outlier_table[sample_set2] > 0).sum(axis=1)
-        outlier_table['NotOutlier2'] = (outlier_table[sample_set2] == 0).sum(axis=1)
-
-    outlier_table['fisherp'] = outlier_table.apply((lambda r: scipy.stats.fisher_exact([[r['Outlier1'],
-                                                                                     r['Outlier2']],
-                                                                                    [r['NotOutlier1'],
-                                                                                     r['NotOutlier2']]])[1]),axis=1)
-
-    outlier_table['fisherFDR'] = correct_pvalues_for_multiple_testing(list(outlier_table['fisherp']),
-                                     correction_type = "Benjamini-Hochberg")
-
-    return outlier_table['fisherFDR']
-
-
 def makeHeatMapTable(pval_table, outlier_table, pval_column, sig_threshold, samples_in_subtype, samples_out_subtype, isoform_column='id'):
     sig_isoforms = list(pval_table.loc[(pval_table[pval_column] <= sig_threshold), isoform_column])
     heatmap_table = outlier_table.loc[(outlier_table[isoform_column].isin(sig_isoforms) == True), [isoform_column] + samples_in_subtype + samples_out_subtype]
@@ -86,82 +59,15 @@ def makeHeatMapTable(pval_table, outlier_table, pval_column, sig_threshold, samp
     return heatmap_table
 
 
-def makeHeatMap(heatmap_table,
-                samples_in_subtype, samples_out_subtype,
-                subtype_colors,
-                isoform_annotations,
-                subtype,
-                alt,
-                fig_name,
-                fig_title = 'Differentially phosphorylated isoforms',
-                isoform_column='id',
-                yticklabels=False,
-                dendrogram=False
-                ):
-
-    lut = {sample:subtype_colors[subtype] for sample in samples_in_subtype}
-    lut2 = {sample:subtype_colors[alt] for sample in samples_out_subtype}
-    lut.update(lut2)
-
-    group = heatmap_table.columns
-    column_colors = group.map(lut)
-
-    if yticklabels == True:
-        labels = [isoform_annotations.loc[(isoform_annotations[isoform_column] == x), 'geneSymbol'].values[0] for x in heatmap_table.index]
-    elif yticklabels == False:
-        labels = False
-
-    g = sns.clustermap(heatmap_table,
-#                        cmap = sns.light_palette('red'),
-                       cmap=sns.cubehelix_palette(start=0.857, rot=0.00, gamma=1.5, hue=1, light=1, dark=0.2, reverse=False, as_cmap=True),
-                       col_cluster = False,
-                       col_colors = column_colors,
-                       xticklabels=False,
-                       yticklabels=labels,
-#                        z_score = 0,
-                       cbar_kws={'label':'# outliers',
-#                                  'ticks':np.arange(0, heatmap_table.values.max())
-                                },
-                       vmin=0,
-                       vmax=np.percentile(heatmap_table.values.max(), 70)
-                      )
-    g.ax_row_dendrogram.set_visible(dendrogram)
-    g.cax.set_position((0.15,0.12,0.04,0.6)) #move colorbar to right
-    ax = g.ax_heatmap
-    ax.set_ylabel('') #change the gene label
-
-#     this chunk makes the legend the describes the different sample groups
-    subtype_patch = mpatches.Patch(color=subtype_colors[subtype], label=subtype)
-    other_patch = mpatches.Patch(color=subtype_colors['Other'], label='Other')
-    fig = plt.gcf()
-    fig.legend(handles=[subtype_patch, other_patch], bbox_to_anchor=(0.6, 0.11))
-
-#     give the plot a title
-    fig.text(0.4, 0.75, fig_title, fontsize=16)
-
-    #save the plot
-    plt.savefig(fig_name, dpi=500, bbox_inches='tight', pad_inches=1)
-    plt.show()
-    plt.close()
-
-
 def fileToList(group_list):
-    group = []
     with open(group_list, 'r') as fh:
-        for line in fh.readlines():
-            group.append(line.strip())
-
-    return group
+        return [line.strip() for line in fh.readlines()]
 
 def fileToDict(tsv_map_file_name):
-    map = dict()
     with open(tsv_map_file_name, 'r') as fh:
-        for line in fh.readlines():
-            map[line.split()[0]] = line.split()[1]
-    return map
+        return {line.split()[0]:line.split()[1] for line in fh.readlines()}
 
-
-def compareOutliers(row, order, fraction):
+def compareQuantiles(row, order, fraction):
     quartile_length = int(len(order)*fraction)
     top_quartile = row[order[0:quartile_length]]
     bottom_quartile = row[order[-quartile_length:]]
@@ -175,7 +81,6 @@ def compareOutliers(row, order, fraction):
     fisher_pval = scipy.stats.fisher_exact(np.array([[top_outliers, top_not_outliers], [bottom_outliers, bottom_not_outliers]]))[1]
 
     return fisher_pval
-
 
 def gauss(x, *p):
     A, mu, sigma = p
