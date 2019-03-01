@@ -77,9 +77,9 @@ if __name__=="__main__":
     sample_names = args.sample_names_file
     up_or_down = args.up_or_down
 
-    sample_columns = fileToList(sample_names)
-
     sample_data = pd.read_csv(data_input, sep='\t')
+    sample_columns = [x for x in fileToList(sample_names) if x in sample_data.columns]
+
     sample_data = cleanDF(sample_data, sample_columns)
 
     outliers = convertToOutliers(sample_data, gene_column_name, sample_columns, NUM_IQRs, up_or_down)
