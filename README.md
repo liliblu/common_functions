@@ -5,12 +5,12 @@ Also some sbatch scripts for running jobs on slurm.
 
 ## Outliers analysis  
 ##### Dependencies:
-pandas
-numpy
-scipy.stats
-argparse
+pandas  
+numpy  
+scipy.stats  
+argparse  
 
-Below examples are also in a jupyter notebook in outliers directory. 
+Example below is also in a jupyter notebook in outliers directory. 
 Example code for running outliers_takes_nans.py via command line:
 
 ```
@@ -51,6 +51,20 @@ The output will have a column corresponding to the gene_column_name from the inp
 
 
 ## Group comparisons using outliers
+
+##### Dependencies:
+pandas  
+numpy  
+matplotlib.patches
+matplotlib.pyplot  
+seaborn  
+scipy.stats  
+sys  
+argparse  
+datetime  
+
+Example below is also in a jupyter notebook in outliers directory. 
+Example code for running outliers_takes_nans.py via command line:
 
 ```
 location_of_py_file="outliers/outlier_comparison_generator.py"
