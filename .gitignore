@@ -1,3 +1,5 @@
-*/*
-*statannot*
+GO_terms/*
+GOstats/*
+ssGSEA2.0-master/*
+statannot/*
 *.pyc
