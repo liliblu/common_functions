@@ -55,8 +55,7 @@ The output will have a column corresponding to the gene_column_name from the inp
 ##### Dependencies:
 pandas  
 numpy  
-matplotlib.patches
-matplotlib.pyplot  
+matplotlib  
 seaborn  
 scipy.stats  
 sys  
