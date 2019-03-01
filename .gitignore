@@ -3,3 +3,4 @@ GOstats/*
 ssGSEA2.0-master/*
 statannot/*
 *.pyc
+*.ipynb_checkpoints*
