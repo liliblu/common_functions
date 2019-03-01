@@ -64,7 +64,7 @@ def assignColors(group_colors, group1_label, group2_label, group1, group2):
 
 def filterOutliers(df, group1_list, group2_list, gene_column_name):
 
-    min_num_outlier_samps = int(len(group1_list)*0.5)
+    min_num_outlier_samps = int(len(group1_list)*0.3)
     group1_outliers = [x+'_outliers' for x in group1_list]
     group1_notOutliers = [x+'_notOutliers' for x in group1_list]
     group2_outliers = [x+'_outliers' for x in group2_list]
