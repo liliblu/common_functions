@@ -1,0 +1,3 @@
+LabelA    group1name    group2name  
+LabelB    group1name    group2name  
+LabelC    group1name    group2name
