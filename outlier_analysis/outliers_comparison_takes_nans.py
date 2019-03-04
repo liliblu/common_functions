@@ -200,7 +200,8 @@ if __name__=="__main__":
                         help='List of genes to highlight with * in y tick labels')
     parser.add_argument('--blue_or_red', type=str, default='red',
                         help='Color scale for heatmap')
-
+    parser.add_argument('--output_qvals', type=bool, choices=[True, False], default=False,
+                        help='Save q-values to a table?')
 
     args = parser.parse_args()
 
@@ -216,6 +217,7 @@ if __name__=="__main__":
     if genes_to_highlight != None:
         genes_to_highlight = fileToList(genes_to_highlight)
     blue_or_red = args.blue_or_red
+    output_qvals = bool(args.output_qvals)
 
 # Assigning colors to samples
     group_color_map, sample_color_map = assignColors(args.group_colors, group1_label, group2_label, group1, group2)
@@ -225,9 +227,12 @@ if __name__=="__main__":
     if len(outliers) == 0:
         print("No rows have outliers in 0.3 of %s samples" % (group1_label))
         sys.exit()
+    print('Testing %s genes for enrichment in %s' %(len(outliers), group1_label))
 
 # Doing statistical test on different groups
     outliers['FDR'] = testDifferentGroupsOutliers(group1, group2, outliers)
+    if output_qvals == True:
+        outliers[[gene_column_name, 'FDR']].to_csv('%s_comparison_qvals.txt'%output_prefix, sep='\t', index=False)
 
     outliers['significant'] = (outliers['FDR'] <= fdr_cut_off)
     sig_diff_count = sum(outliers['significant'])
