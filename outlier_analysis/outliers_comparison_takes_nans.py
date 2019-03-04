@@ -14,22 +14,29 @@ def fileToDict(tsv_map_file_name):
     with open(tsv_map_file_name, 'r') as fh:
         return {line.split()[0]:line.split()[1] for line in fh.readlines()}
 
-def correct_pvalues_for_multiple_testing(pvalues, correction_type="Benjamini-Hochberg"):
-
+def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-Hochberg"):
+    """
+    consistent with R - print correct_pvalues_for_multiple_testing([0.0, 0.01, 0.029, 0.03, 0.031, 0.05, 0.069, 0.07, 0.071, 0.09, 0.1])
+    """
     from numpy import array, empty
     pvalues = array(pvalues)
-    n = len(pvalues)
-    new_pvalues = empty(n)
+    n = sum(~np.isnan(pvalues))
+    new_pvalues = empty(len(pvalues))
+
     if correction_type == "Bonferroni":
         new_pvalues = n * pvalues
+
     elif correction_type == "Bonferroni-Holm":
         values = [ (pvalue, i) for i, pvalue in enumerate(pvalues) ]
+        values = [x for x in values if ~np.isnan(x[0])]
         values.sort()
         for rank, vals in enumerate(values):
             pvalue, i = vals
             new_pvalues[i] = (n-rank) * pvalue
     elif correction_type == "Benjamini-Hochberg":
+
         values = [ (pvalue, i) for i, pvalue in enumerate(pvalues) ]
+        values = [x for x in values if ~np.isnan(x[0])]
         values.sort()
         values.reverse()
         new_values = []
@@ -43,6 +50,12 @@ def correct_pvalues_for_multiple_testing(pvalues, correction_type="Benjamini-Hoc
         for i, vals in enumerate(values):
             pvalue, index = vals
             new_pvalues[index] = new_values[i]
+
+    new_pvalues[np.isnan(pvalues)] = np.nan
+    for i, val in enumerate(new_pvalues):
+        if ~np.isnan(val):
+            new_pvalues[i] = min(1, val)
+
     return new_pvalues
 
 def assignColors(group_colors, group1_label, group2_label, group1, group2):
