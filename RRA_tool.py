@@ -30,7 +30,7 @@ def betaScore_rho_p(rank_vector):
     if len(rank_vector) == 0:
         return np.nan, np.nan, np.nan
     n = len(rank_vector)
-    betaScores = pd.Series(empty(n))
+    betaScores = rank_vector.copy(deep=True)
 
     sorted_ranks = rank_vector.sort_values().index
     for i, k in enumerate(sorted_ranks):
