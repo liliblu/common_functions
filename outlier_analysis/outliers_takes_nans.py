@@ -48,14 +48,24 @@ def convertToOutliers(df, gene_column_name, sample_columns, NUM_IQRs, up_or_down
     return outlier_df
 
 
-def countNonNans(df, gene_column_name, sample_columns):
+def countNonNans(df, gene_column_name, sample_columns, aggregate):
+    '''
+    Optional. If aggregate is set to True, adds up outliers in multiple rows,
+    if there are repeated values in gene_column_name.
+    If aggregation is set to False, just sets up the correct columns to feed
+    into the comparison generator.
+    '''
     not_outlier_cols = [x + '_notOutliers' for x in sample_columns]
     outlier_cols = [x + '_outliers' for x in sample_columns]
 
     agged_outliers = pd.DataFrame()
-    agged_outliers[not_outlier_cols] = df.groupby(by=gene_column_name)[sample_columns].agg(lambda x: pd.Series(x==0).sum())
-    agged_outliers[outlier_cols] = df.groupby(by=gene_column_name)[sample_columns].agg(lambda x: pd.Series(x==1).sum())
-    agged_outliers = agged_outliers.reset_index()
+    if aggregate:
+        agged_outliers[not_outlier_cols] = df.groupby(by=gene_column_name)[sample_columns].agg(lambda x: pd.Series(x==0).sum())
+        agged_outliers[outlier_cols] = df.groupby(by=gene_column_name)[sample_columns].agg(lambda x: pd.Series(x==1).sum())
+        agged_outliers = agged_outliers.reset_index()
+    elif aggregate == False:
+        agged_outliers[[gene_column_name] + outlier_cols] = df[[gene_column_name]+sample_columns]
+        agged_outliers[not_outlier_cols] = 1 - df[sample_columns]
 
     return agged_outliers
 
@@ -63,9 +73,10 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Parse some arguments")
     parser.add_argument('--input_df', type=str)
     parser.add_argument('--iqrs_over_median', type=float, default=1.5)
-    parser.add_argument('--gene_column_name', type=str, default='id')
+    parser.add_argument('--gene_column_name', type=str, default='geneSymbol')
     parser.add_argument('--output_file', type=str, default='outliers.tsv')
     parser.add_argument('--sample_names_file', type=str, default='sample_roster.txt')
+    parser.add_argument('--aggregate', type=bool, choices=['True', 'False'],  default=True)
     parser.add_argument('--up_or_down', type=str, choices=['up', 'down'], default='up')
 
     args = parser.parse_args()
@@ -76,6 +87,7 @@ if __name__=="__main__":
     NUM_IQRs = args.iqrs_over_median
     sample_names = args.sample_names_file
     up_or_down = args.up_or_down
+    aggregate = args.aggregate
 
     sample_data = pd.read_csv(data_input, sep='\t')
     sample_columns = [x for x in fileToList(sample_names) if x in sample_data.columns]
@@ -83,7 +95,7 @@ if __name__=="__main__":
     sample_data = cleanDF(sample_data, sample_columns)
 
     outliers = convertToOutliers(sample_data, gene_column_name, sample_columns, NUM_IQRs, up_or_down)
-    outliers = countNonNans(outliers, gene_column_name, sample_columns)
+    outliers = countNonNans(outliers, gene_column_name, sample_columns, aggregate)
     outliers.to_csv(write_results_to, sep='\t', index=False)
 
     print('Outlier analysis complete. Results are in %s' %write_results_to)
