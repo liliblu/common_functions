@@ -15,7 +15,7 @@ Example code for running outliers_takes_nans.py via command line:
 
 ```
 location_of_py_file="outliers/outliers_takes_nans.py"
-location_of_data_file="genes_vs_samples.tsv"
+location_of_data_file="all_samples.tsv"
 iqrs_over_median=1.5
 gene_column_name="geneSymbol"
 output_file="outliers_output.tsv"
