@@ -10,10 +10,8 @@ numpy
 scipy.stats  
 argparse  
 
-Example below is also in a jupyter notebook in outliers directory. 
-Example code for running make_outliers_table.py via command line:
+Example code in make_outliers_table.sh:
 
-make_outliers_table.sh:
 ```
 #!/bin/bash
 
@@ -70,8 +68,7 @@ sys
 argparse  
 datetime  
 
-Example below is also in a jupyter notebook in outliers directory. 
-Example code for running outliers_takes_nans.py via command line:
+Example code in make_comparisons_on_outliers.sh:
 
 ```
 #!/bin/bash
@@ -136,3 +133,4 @@ python2.7  ${location_of_py_file} \
 
 ##### Output explanation:
 This tool has 2 default outputs, and 1 optional output. The first output is a heatmap, visualizing genes that are significantly enriched in the group of interest, compared to the second group. The second output is a list of genes/labels for rows that were found to be significantly enriched in the group of interest. Optionally, you can also output a table of gene names and adjusted p-values.
+
