@@ -22,8 +22,11 @@ def betaScore_rho_p(rank_vector):
     """
     Compares each element in the vector to its corresponding value in the null distribution vector,
     using the probability mass function of the binomial distribution.
-    Assigns a p-value to each element in the vector, creating the betaScore vector.
-    Uses minimum betaScore as rho
+    Assigns a betascore to each element in the vector, creating the betaScore vector.
+    Uses minimum of the betaScore vector as rho,
+    corrects for number of rhos calculated using bonferroni, to generate p.
+    Adapted from https://academic.oup.com/bioinformatics/article/22/16/1979/208386
+    Pounds, S., Cheng, C. Bioinformatics, 2006. 
     """
 
     rank_vector = rank_vector.dropna()
