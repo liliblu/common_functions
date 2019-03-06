@@ -5,3 +5,4 @@ statannot/*
 test_docs/*
 *.pyc
 *.ipynb_checkpoints*
+*.gdoc
