@@ -100,9 +100,10 @@ def gaussPlusGeo(x, *p):
 
 def makeRankedHeatmaps(input_df, sampsIn, sampsOut, prefix, colors):
     num_plots = len(input_df)
+    num_samples = len(list(input_df))
     if num_plots > 0:
         fig, axs = plt.subplots(nrows=num_plots, ncols=1,
-                                figsize=(15, 0.4*num_plots),
+                                figsize=(0.08*num_samples, 0.2*num_plots),
                                 gridspec_kw=dict(hspace=0.05))
 
         ax_ind = 0
@@ -123,16 +124,15 @@ def makeRankedHeatmaps(input_df, sampsIn, sampsOut, prefix, colors):
                             ax=ax,
                             legend=False,
                            )
-            ax.set_ylabel(i, rotation=0, ha="right", va='center')
+            ax.set_ylabel(i, rotation=0, fontsize=10, ha="right", va='center')
 
             ax_ind+=1
 
-        axs[0].set_title('Phosphosites ranked in %s' %prefix, fontsize=24)
-        plt.text(0, 1.3, 'Low', fontsize=16, ha='left', va='center', transform=axs[0].transAxes)
-        plt.text(1, 1.3, 'High', fontsize=16, ha='right', va='center', transform=axs[0].transAxes)
+        axs[0].set_title('Phosphosites ranked in %s' %prefix, fontsize=16)
+        plt.text(0, 1.3, 'Low', fontsize=16, ha='left', va='bottom', transform=axs[0].transAxes)
+        plt.text(1, 1.3, 'High', fontsize=16, ha='right', va='bottom', transform=axs[0].transAxes)
 
         handles = [mpatches.Patch(color=color, label=label) for label, color in colors.iteritems()]
         plt.legend(handles=handles, loc=(1.01, 0))
-        plt.tight_layout()
 
     return axs
