@@ -6,6 +6,7 @@ gene_column_name="Genes"
 fdr_cut_off=0.05
 genes_to_highlight="genes_of_interest.txt"
 blue_or_red="red"
+output_qvals="True"
 
 output_prefix="test_group1_comparison"
 group1_label="group_of_interest"
@@ -25,5 +26,5 @@ python2.7  ${location_of_py_file} \
 --group2_list ${group2_list} \
 --genes_to_highlight ${genes_to_highlight} \
 --blue_or_red ${blue_or_red} \
---group_colors ${group_colors}
-
+--group_colors ${group_colors} \
+--output_qvals ${output_qvals}

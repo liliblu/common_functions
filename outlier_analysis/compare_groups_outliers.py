@@ -213,7 +213,7 @@ if __name__=="__main__":
                         help='List of genes to highlight with * in y tick labels')
     parser.add_argument('--blue_or_red', type=str, default='red',
                         help='Color scale for heatmap')
-    parser.add_argument('--output_qvals', type=bool, choices=[True, False], default=False,
+    parser.add_argument('--output_qvals', type=str, choices=['True', 'False'], default=False,
                         help='Save q-values to a table?')
 
     args = parser.parse_args()
