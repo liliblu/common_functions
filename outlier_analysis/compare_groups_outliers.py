@@ -252,7 +252,7 @@ if __name__=="__main__":
     print('%s signficantly differential proteins' % sig_diff_count)
 
 #If enough genes, make heatmap
-    if sig_diff_count >= 2:
+    if sig_diff_count >= 1:
         outlier_columns = [x+'_outliers' for x in group1]
         outlier_columns.extend([x+'_outliers' for x in group2])
         heatmap_table = frac_outliers.loc[(outliers['significant'] == True), [gene_column_name] + outlier_columns]
