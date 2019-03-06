@@ -26,7 +26,7 @@ def betaScore_rho_p(rank_vector):
     Uses minimum of the betaScore vector as rho,
     corrects for number of rhos calculated using bonferroni, to generate p.
     Adapted from https://academic.oup.com/bioinformatics/article/22/16/1979/208386
-    Pounds, S., Cheng, C. Bioinformatics, 2006. 
+    Pounds, S., Cheng, C. Bioinformatics, 2006.
     """
 
     rank_vector = rank_vector.dropna()
@@ -81,7 +81,7 @@ if __name__=="__main__":
     parser.add_argument('--columnsInGroup', type=str)
     parser.add_argument('--columnsOutOfGroup',type=str)
     parser.add_argument('--enrichedInHighOrLowValues', default='high', choices=['high', 'low'], type=str)
-    parser.add_argument('--fdrCutOff', default=0.05, type=float)
+    # parser.add_argument('--pvalCutOff', default=0.05, type=float)
     parser.add_argument('--outputPrefix', default='RRA', type=str)
 
     args = parser.parse_args()
@@ -92,7 +92,7 @@ if __name__=="__main__":
     sample_columns = columnsInGroup + columnsOutOfGroup
 
     enrichedInHighOrLowValues = args.enrichedInHighOrLowValues
-    fdr_cut_off = args.fdrCutOff
+    # pvalCutOff = args.pvalCutOff
     outputPrefix = args.outputPrefix
 
     sample_data = cleanDF(sample_data, sample_columns)
