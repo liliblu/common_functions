@@ -6,15 +6,19 @@ scipy.stats
 argparse  
 
 Example below is also in a jupyter notebook in outliers directory. 
-Example code for running outliers_takes_nans.py via command line:
+Example code for running make_outliers_table.py via command line:
 
+make_outliers_table.sh:
 ```
-location_of_py_file="outliers/outliers_takes_nans.py"
-location_of_data_file="all_samples.tsv"
-iqrs_over_median=1.5
-gene_column_name="geneSymbol"
-output_file="outliers_output.tsv"
-sample_names_file="columns_to_consider.txt"
+#!/bin/bash
+
+location_of_py_file="make_outliers_table.py"
+location_of_data_file="test_input_for_outliers.tsv"
+iqrs_over_median=0.5 #Note 1.5 IQRs is suggested, this is just for test data. 
+gene_column_name="Genes"
+output_file="test_outliers_output_up.tsv"
+sample_names_file="test_samples.txt"
+aggregate=True
 updown="up"
 
 python2.7 ${location_of_py_file} \
@@ -23,7 +27,9 @@ python2.7 ${location_of_py_file} \
 --gene_column_name ${gene_column_name} \
 --output_file ${output_file} \
 --sample_names_file ${sample_names_file} \
+--aggregate ${aggregate} \
 --up_or_down ${updown}
+
 ```
 
 ##### Argument explanation:
@@ -31,13 +37,15 @@ python2.7 ${location_of_py_file} \
 
 *location_of_data_file:* Path to input file. Sample names must match column names. Needs gene names column as well. Can also include other annotation columns, but those will not be propagated to output.  
 
-*iqrs_over_median:* Threshold for a value to be considered an "outlier". Number of inter-quartile ranges over the median, calculated for each gene, to be used as a threshold.  
+*iqrs_over_median:* Threshold for a value to be considered an "outlier". Number of inter-quartile ranges over the median, calculated for each gene, to be used as a threshold.  1.5 is suggested. 
 
 *gene_column_name:* The name of the column to be used for aggregating values per gene. For instance, if phospho-peptide data is used as input, it may be helpful to aggregate outliers at the gene or isoform level.  
 
 *output_file:* Name/location to put outliers output.   
 
 *sample_names_file:* Column/sample names to be used for analysis. Columns not included in this list will be ignored.   
+
+*aggregate:* Whether to combine rows based on an annotation column. For instance, add up outliers and non-outliers for multiple phospho sites based on a gene column.    
 
 *up_or_down*: Whether analysis should mark outliers that are **greater than** median + IQR threshold, or **less than** median - IQR threshold.  
 
@@ -61,19 +69,22 @@ Example below is also in a jupyter notebook in outliers directory.
 Example code for running outliers_takes_nans.py via command line:
 
 ```
-location_of_py_file="outliers/outlier_comparison_generator.py"
-location_of_outliers_file="outliers_output.tsv"
-gene_column_name="geneSymbol"
-fdr_cut_off=0.05
-genes_to_highlight="druggable_gene_list.txt"
-blue_or_red="red"
+#!/bin/bash
 
-output_prefix="prefix_for_output_files"
+location_of_py_file="compare_groups_outliers.py"
+location_of_outliers_file="test_outliers_output_up.tsv"
+gene_column_name="Genes"
+fdr_cut_off=0.05
+genes_to_highlight="genes_of_interest.txt"
+blue_or_red="red"
+output_qvals="True"
+
+output_prefix="test_group1_comparison"
 group1_label="group_of_interest"
-group1_list="group_of_interest_samples.txt"
+group1_list="test_group1.txt"
 group2_label="not_in_group_of_interest"
-group2_list="not_in_group_of_interest_samples.txt"
-group_colors="group_colors_for_labels.tsv"
+group2_list="test_group2.txt"
+group_colors="test_group_colors.txt"
 
 python2.7  ${location_of_py_file} \
 --outliers_table  ${location_of_outliers_file} \
@@ -86,13 +97,15 @@ python2.7  ${location_of_py_file} \
 --group2_list ${group2_list} \
 --genes_to_highlight ${genes_to_highlight} \
 --blue_or_red ${blue_or_red} \
---group_colors ${group_colors}
+--group_colors ${group_colors} \
+--output_qvals ${output_qvals}
+
 ```
 
 ##### Argument explanation:
-*location_of_py_file:* Path to outlier_comparison_generator.py file.  
+*location_of_py_file:* Path to compare_groups_outliers.py file.  
 
-*location_of_outliers_file:* Path to outliers output from outliers_takes_nans.py.  
+*location_of_outliers_file:* Path to outliers output from make_outliers_table.py.  
 
 *gene_column_name:* Name of column used for labeling rows, usually gene names. 
 
@@ -100,7 +113,7 @@ python2.7  ${location_of_py_file} \
 
 *genes_to_highlight:* Optional. Can input a list of genes that will be marked with "\*" in the output heatmap.  
 
-*blue_or_red:* Color map colors for output heatmap. Default red. Useful for differentiating between up and down outliers. 
+*blue_or_red:* Color map colors for output heatmap. Useful for differentiating between up and down outliers. Choices are red or blue, default is red. 
 
 *output_prefix:* Prefix used for output files. 
 
@@ -112,8 +125,10 @@ python2.7  ${location_of_py_file} \
 
 *group2_list:* Path to list of samples **not** in group of interest. Samples not included in this list or group1_list will be ignored in analysis.  
 
-*group_colors:* Tab separated list of group labels with paired hex color for label. 
+*group_colors:* Tab separated list of group labels with paired hex color for label. If it's not supplies, default colors will be used.  
+
+*output_qvals:* Choose whether to output adjusted p-values for all genes into a table. Choices are True and False, default False.   
 
 ##### Output explanation:
-This tool has 2 outputs. The first output is a heatmap, visualizing genes that are significantly enriched in the group of interest, compared to the second group. The second output is a list of genes/labels for rows that were found to be significantly enriched in the group of interest. 
+This tool has 2 default outputs, and 1 optional output. The first output is a heatmap, visualizing genes that are significantly enriched in the group of interest, compared to the second group. The second output is a list of genes/labels for rows that were found to be significantly enriched in the group of interest. Optionally, you can also output a table of gene names and adjusted p-values.
 
