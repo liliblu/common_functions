@@ -12,7 +12,7 @@ enrichedInHighOrLowValues="high"
 outputPrefix="test_output"
 
 python2.7 ${location_of_tool} \
---location_input ${location_input} \
+--input_df ${location_input} \
 --columnsInGroup ${columnsInGroup} \
 --columnsOutOfGroup ${columnsOutOfGroup} \
 --enrichedInHighOrLowValues ${enrichedInHighOrLowValues} \
