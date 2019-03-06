@@ -5,10 +5,8 @@ numpy
 scipy.stats  
 argparse  
 
-Example below is also in a jupyter notebook in outliers directory. 
-Example code for running make_outliers_table.py via command line:
+Example code in make_outliers_table.sh:
 
-make_outliers_table.sh:
 ```
 #!/bin/bash
 
@@ -65,8 +63,7 @@ sys
 argparse  
 datetime  
 
-Example below is also in a jupyter notebook in outliers directory. 
-Example code for running outliers_takes_nans.py via command line:
+Example code in make_comparisons_on_outliers.sh:
 
 ```
 #!/bin/bash
