@@ -28,14 +28,14 @@ def betaScore_rho_p(rank_vector):
 
     rank_vector = rank_vector.dropna()
     if len(rank_vector) == 0:
-        return np.nan, np.nan, np.nan
+        return (np.nan, np.nan, np.nan)
     n = len(rank_vector)
     betaScores = rank_vector.copy(deep=True)
 
     sorted_ranks = rank_vector.sort_values().index
     for i, k in enumerate(sorted_ranks):
         x = rank_vector[k]
-        betaScore = sum([stats.binom.pmf(l, n, x, loc=0) for l in range(i, n+1)])
+        betaScore = stats.binom.sf(i, n, x, loc=1)
         betaScores[k] = betaScore
 
     rho = min(betaScores)
