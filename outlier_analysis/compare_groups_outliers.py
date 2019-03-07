@@ -185,8 +185,7 @@ def makeHeatMap(heatmap_table, group_color_map,sample_color_map, group1,
 
     # Save and show the plot
     plt.savefig('%s.pdf' %output_prefix, dpi=500, bbox_inches='tight', pad_inches=0.5)
-    plt.show()
-    plt.close()
+    return g
 
 
 if __name__=="__main__":
