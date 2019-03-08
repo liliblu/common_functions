@@ -47,7 +47,6 @@ def convertToOutliers(df, gene_column_name, sample_columns, NUM_IQRs, up_or_down
 
     return outlier_df
 
-
 def countNonNans(df, gene_column_name, sample_columns, aggregate):
     '''
     Optional. If aggregate is set to True, adds up outliers in multiple rows,
@@ -69,25 +68,40 @@ def countNonNans(df, gene_column_name, sample_columns, aggregate):
 
     return agged_outliers
 
+def makeFracTable(df, sample_list, gene_column_name):
+    cols_outliers = [x for x in sample_list if '_outliers' in x]
+    cols_notOutliers = [x for x in sample_list if '_notOutliers' in x]
+
+    num_total_psites = pd.DataFrame()
+    num_total_psites[cols_outliers] = df[cols_outliers] + df[cols_notOutliers]
+
+    frac_outliers = df[cols_outliers] / num_total_psites
+    frac_outliers[gene_column_name] = outliers[gene_column_name]
+    frac_outliers.columns = [x.split('_')[0] for x in frac_outliers.columns]
+
+    return frac_outliers
+
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Parse some arguments")
     parser.add_argument('--input_df', type=str)
     parser.add_argument('--iqrs_over_median', type=float, default=1.5)
     parser.add_argument('--gene_column_name', type=str, default='geneSymbol')
-    parser.add_argument('--output_file', type=str, default='outliers.tsv')
+    parser.add_argument('--output_prefix', type=str, default='outliers.tsv')
     parser.add_argument('--sample_names_file', type=str, default='sample_roster.txt')
     parser.add_argument('--aggregate', type=str, choices=['True', 'False'],  default='True')
     parser.add_argument('--up_or_down', type=str, choices=['up', 'down'], default='up')
+    parser.add_argument('--write_frac_table', type=str, choices=['True', 'False'], default='False')
 
     args = parser.parse_args()
 
     data_input = args.input_df
     gene_column_name = args.gene_column_name
-    write_results_to = args.output_file
+    write_results_to = args.output_prefix
     NUM_IQRs = args.iqrs_over_median
     sample_names = args.sample_names_file
     up_or_down = args.up_or_down
     aggregate = bool(args.aggregate)
+    write_frac_table = bool(args.write_frac_table)
 
     sample_data = pd.read_csv(data_input, sep='\t')
     sample_columns = [x for x in fileToList(sample_names) if x in sample_data.columns]
@@ -96,6 +110,9 @@ if __name__=="__main__":
 
     outliers = convertToOutliers(sample_data, gene_column_name, sample_columns, NUM_IQRs, up_or_down)
     outliers = countNonNans(outliers, gene_column_name, sample_columns, aggregate)
-    outliers.to_csv(write_results_to, sep='\t', index=False)
+    if write_frac_table:
+        makeFracTable(outliers, sample_names, gene_column_name).to_csv('%s.fraction_outliers.txt' %write_results_to, sep='\t', index=False)
+
+    outliers.to_csv('%s.txt' % write_results_to, sep='\t', index=False)
 
     print('Outlier analysis complete. Results are in %s' %write_results_to)
