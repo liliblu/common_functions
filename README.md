@@ -12,7 +12,7 @@ argparse
 
 ## RRA analysys:
 ##### Dependencies:
-numpy
-pandas
-argparse
-scipy
+numpy  
+pandas  
+argparse  
+scipy  
