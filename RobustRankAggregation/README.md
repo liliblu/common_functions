@@ -1,5 +1,11 @@
 ## Robust Rank Aggregation to measure group over representation
 
+##### Dependencies:
+numpy  
+pandas  
+argparse  
+scipy  
+
 Example in run_RRA.sh:
 ```
 #!/bin/bash
