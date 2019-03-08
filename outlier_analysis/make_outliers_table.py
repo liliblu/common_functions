@@ -5,17 +5,14 @@ import scipy.stats
 import argparse
 
 def fileToList(group_list):
-    group = []
     with open(group_list, 'r') as fh:
-        for line in fh.readlines():
-            group.append(line.strip())
-    return group
+        return [line.strip() for line in fh.readlines()]
 
 def cleanDF(df, sample_columns):
     '''
     Convert string nans to np.nan and string numbers to floats.
     '''
-    df = df.replace(['na', 'NaN', 'Na', 'nan'], np.nan)
+    df = df.replace(['na', 'NaN', 'Na', 'nan', 'NA', 'NAN', 'Nan'], np.nan)
     df[sample_columns] = df[sample_columns].astype(float)
 
     return df
