@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import scipy.stats
 import argparse
+import datetime
 
 def fileToList(group_list):
     with open(group_list, 'r') as fh:
@@ -62,7 +63,6 @@ def countNonNans(df, gene_column_name, sample_columns, aggregate):
     elif aggregate == False:
         agged_outliers[[gene_column_name] + outlier_cols] = df[[gene_column_name]+sample_columns]
         agged_outliers[not_outlier_cols] = 1 - df[sample_columns]
-
     return agged_outliers
 
 def makeFracTable(df, sample_list, gene_column_name):
@@ -83,7 +83,7 @@ if __name__=="__main__":
     parser.add_argument('--input_df', type=str)
     parser.add_argument('--iqrs_over_median', type=float, default=1.5)
     parser.add_argument('--gene_column_name', type=str, default='geneSymbol')
-    parser.add_argument('--output_prefix', type=str, default='outliers.tsv')
+    parser.add_argument('--output_prefix', type=str, default='outliers')
     parser.add_argument('--sample_names_file', type=str, default='sample_roster.txt')
     parser.add_argument('--aggregate', type=str, choices=['True', 'False'],  default='True')
     parser.add_argument('--up_or_down', type=str, choices=['up', 'down'], default='up')
@@ -97,8 +97,8 @@ if __name__=="__main__":
     NUM_IQRs = args.iqrs_over_median
     sample_names = args.sample_names_file
     up_or_down = args.up_or_down
-    aggregate = bool(args.aggregate)
-    write_frac_table = bool(args.write_frac_table)
+    aggregate = args.aggregate == 'True'
+    write_frac_table = args.write_frac_table == 'True'
 
     sample_data = pd.read_csv(data_input, sep='\t')
     sample_columns = [x for x in fileToList(sample_names) if x in sample_data.columns]
@@ -107,9 +107,8 @@ if __name__=="__main__":
 
     outliers = convertToOutliers(sample_data, gene_column_name, sample_columns, NUM_IQRs, up_or_down)
     outliers = countNonNans(outliers, gene_column_name, sample_columns, aggregate)
+
     if write_frac_table:
         makeFracTable(outliers, sample_names, gene_column_name).to_csv('%s.fraction_outliers.txt' %write_results_to, sep='\t', index=False)
-
-    outliers.to_csv('%s.txt' % write_results_to, sep='\t', index=False)
-
-    print('Outlier analysis complete. Results are in %s' %write_results_to)
+    outliers.to_csv('%s.txt' %write_results_to, sep='\t', index=False)
+    print('Outlier analysis complete. Results are in %s.txt' %write_results_to)

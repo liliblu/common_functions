@@ -229,7 +229,7 @@ if __name__=="__main__":
     if genes_to_highlight != None:
         genes_to_highlight = fileToList(genes_to_highlight)
     blue_or_red = args.blue_or_red
-    output_qvals = bool(args.output_qvals)
+    output_qvals = args.output_qvals == 'True'
 
 # Assigning colors to samples
     group_color_map, sample_color_map = assignColors(args.group_colors, group1_label, group2_label, group1, group2)
