@@ -261,8 +261,7 @@ if __name__=="__main__":
                     output_prefix, blue_or_red, genes_to_highlight)
 
 #Write significantly different genes to a file
-    sig_genes = outliers.loc[(outliers['significant']==True), gene_column_name]
-    if len(sig_genes) > 0:
+        sig_genes = outliers.loc[(outliers['significant']==True), gene_column_name]
         with open('%s.outlier_sites_in_%s.txt' %(output_prefix, group1_label), 'w') as fh:
             for gene in sig_genes:
                 fh.write('%s\n'%gene)
