@@ -248,7 +248,7 @@ if __name__=="__main__":
 
     outliers['significant'] = (outliers['FDR'] <= fdr_cut_off)
     sig_diff_count = sum(outliers['significant'])
-    print('%s signficantly differential proteins' % sig_diff_count)
+    print('%s signficantly differential genes' % sig_diff_count)
 
 #If enough genes, make heatmap
     if sig_diff_count >= 1:
