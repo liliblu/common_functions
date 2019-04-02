@@ -136,3 +136,8 @@ def makeRankedHeatmaps(input_df, sampsIn, sampsOut, prefix, colors):
         plt.legend(handles=handles, loc=(1.01, 0))
 
     return axs
+
+def listToFile(list, file_name):
+    with open(file_name, 'w') as fh:
+        for x in list:
+            fh.write('%s\n'%x)
