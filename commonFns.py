@@ -8,7 +8,6 @@ import seaborn as sns
 import scipy.stats
 import catheat
 
-
 def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-Hochberg"):
     """
     consistent with R - print correct_pvalues_for_multiple_testing([0.0, 0.01, 0.029, 0.03, 0.031, 0.05, 0.069, 0.07, 0.071, 0.09, 0.1])
@@ -53,13 +52,6 @@ def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-H
 
     return new_pvalues
 
-def makeHeatMapTable(pval_table, outlier_table, pval_column, sig_threshold, samples_in_subtype, samples_out_subtype, isoform_column='id'):
-    sig_isoforms = list(pval_table.loc[(pval_table[pval_column] <= sig_threshold), isoform_column])
-    heatmap_table = outlier_table.loc[(outlier_table[isoform_column].isin(sig_isoforms) == True), [isoform_column] + samples_in_subtype + samples_out_subtype]
-    heatmap_table = heatmap_table.set_index(isoform_column)
-    return heatmap_table
-
-
 def fileToList(group_list):
     with open(group_list, 'r') as fh:
         return [line.strip() for line in fh.readlines()]
@@ -99,6 +91,7 @@ def gaussPlusGeo(x, *p):
 
 
 def makeRankedHeatmaps(input_df, sampsIn, sampsOut, prefix, colors):
+    #Useful for showing RRA analysis
     num_plots = len(input_df)
     num_samples = len(list(input_df))
     if num_plots > 0:
