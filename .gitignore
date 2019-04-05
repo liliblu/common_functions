@@ -6,3 +6,4 @@ test_docs/*
 *.pyc
 *.ipynb_checkpoints*
 *.gdoc
+plotly_creds.ipynb
