@@ -14,12 +14,15 @@ def parseGOFile(fil):
     return bio_process_go, M
 
 def calculateGOEnrichment(genes,
-                            test='hypergeom',
-                            background_list=M,
-                            fil='/Users/lili/google_drive/Ruggles_lab/common_functions/GO_terms/GO_Biological_Process_2018.txt'):
+                        test='hypergeom',
+                        background_list=None,
+                        fil='/Users/lili/google_drive/Ruggles_lab/common_functions/GO_terms/GO_Biological_Process_2018.txt'):
 
     bio_process_go, M = parseGOFile(fil)
-    M = len(M.intersection(set(background_list)))
+    if background_list == None:
+        M = len(M)
+    else:
+        M = len(M.intersection(set(background_list)))
 
     genes = set(genes)
     N = len(genes)
