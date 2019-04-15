@@ -2,6 +2,7 @@ from scipy.stats import hypergeom
 from scipy.stats import fisher_exact
 import pandas as pd
 import commonFns
+import numpy as np
 
 
 def parseGOFile(fil):
@@ -16,7 +17,7 @@ def parseGOFile(fil):
 def calculateGOEnrichment(genes,
                         test='hypergeom',
                         background_list=None,
-                        fil='/Users/lili/google_drive/Ruggles_lab/common_functions/GO_terms/GO_Biological_Process_2018.txt'):
+                        fil='/Users/lili/dropbox_lili/common_functions/GO_terms/GO_Biological_Process_2018.txt'):
 
     bio_process_go, M = parseGOFile(fil)
     if background_list == None:
@@ -37,4 +38,5 @@ def calculateGOEnrichment(genes,
             results = results.append(pd.DataFrame.from_dict(line),sort=True, ignore_index=True)
     results['pval'] = results.apply((lambda r: hypergeom.sf(k=r['nOverlap'], M=M, n=r['nGO'], N=N, loc=1)), axis=1)
     results['FDR'] = commonFns.correct_pvalues_for_multiple_testing(results['pval'])
+    results['-log10FDR'] = -np.log10(results['FDR'])
     return results
