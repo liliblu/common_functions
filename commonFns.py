@@ -134,3 +134,40 @@ def listToFile(list, file_name):
     with open(file_name, 'w') as fh:
         for x in list:
             fh.write('%s\n'%x)
+
+def computeOrder(df,
+                 optimal=True,
+                 dist_method="euclidean",
+                 cluster_method="average"):
+
+    dist_mat = pdist(df, metric=dist_method)
+    link_mat = hierarchy.linkage(dist_mat, method=cluster_method)
+
+    if optimal==True:
+        return hierarchy.leaves_list(hierarchy.optimal_leaf_ordering(link_mat, dist_mat))
+    else:
+        return hierarchy.leaves_list(link_mat)
+
+def clustermap(df,
+               dist_method="euclidean",
+               cluster_method="average",
+               col_cluster=True,
+               row_cluster=True,
+               optimal=True,
+               **heatmap_kws):
+
+    if col_cluster==True:
+        col_order = computeOrder(df, optimal, dist_method, cluster_method)
+    else:
+        col_order = df.columns
+
+    if row_cluster==True:
+        row_order = computeOrder(df.transpose(), optimal, dist_method, cluster_method)
+    else:
+        row_order = df.index
+
+    df = df.reindex(col_order, axis=1).reindex(row_order, axis=0)
+
+    ax = sns.heatmap(df, **heatmap_kws)
+
+    return ax, df
