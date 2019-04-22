@@ -156,18 +156,21 @@ def clustermap(df,
                optimal=True,
                **heatmap_kws):
 
-    if col_cluster==True:
-        col_order = computeOrder(df, optimal, dist_method, cluster_method)
-    else:
-        col_order = df.columns
-
     if row_cluster==True:
-        row_order = computeOrder(df.transpose(), optimal, dist_method, cluster_method)
+        row_order = computeOrder(df, optimal, dist_method, cluster_method)
+        row_order = [df.index[i] for i in row_order]
     else:
-        row_order = df.index
+        col_order = df.index
+
+    if col_cluster==True:
+        col_order = computeOrder(df.transpose(), optimal, dist_method, cluster_method)
+        col_order = [df.columns[i] for i in col_order]
+    else:
+        row_order = df.columns
 
     df = df.reindex(col_order, axis=1).reindex(row_order, axis=0)
 
     ax = sns.heatmap(df, **heatmap_kws)
 
     return ax, df
+    
