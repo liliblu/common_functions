@@ -36,7 +36,7 @@ if __name__=="__main__":
     df = df.loc[(df[geneSymbol_col].isnull()==False)&
                 (df[psite_col].str.contains(' ')==False), :]
     df[samples] = df[samples].astype(float)
-    df['label'] = df[geneSymbol_col] + '_' + df[psite_col].str[0:-2]
+    df['label'] = df[geneSymbol_col] + '_' + df[psite_col].str[0:-1]
 
     df = df.loc[(df[samples].isnull().sum(axis=1)<len(samples)/2), ['label']+samples]
 
