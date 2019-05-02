@@ -62,6 +62,7 @@ Fraction table writes a tab separated file with the fraction of sites per sample
 ## Group comparisons using outliers
 
 ##### Dependencies:
+python3
 pandas  
 numpy  
 matplotlib  
@@ -91,7 +92,7 @@ group2_label="not_in_group_of_interest"
 group2_list="test_group2.txt"
 group_colors="test_group_colors.txt"
 
-python2.7  ${location_of_py_file} \
+python3.5  ${location_of_py_file} \
 --outliers_table  ${location_of_outliers_file} \
 --gene_column_name ${gene_column_name} \
 --fdr_cut_off ${fdr_cut_off} \
