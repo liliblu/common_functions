@@ -163,7 +163,7 @@ def makeHeatMap(heatmap_table, group_color_map,sample_color_map, group1,
     ax.set_ylabel('') #change the gene label
 
     # Make the legend the describes the different sample groups
-    handles = [mpatches.Patch(color=color, label=group) for group, color in group_color_map.iteritems()]
+    handles = [mpatches.Patch(color=color, label=group) for group, color in group_color_map.items()]
 
     fig = plt.gcf()
     fig.legend(handles=handles, bbox_to_anchor=(0.6, 0.10))
