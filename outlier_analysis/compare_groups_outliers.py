@@ -44,7 +44,7 @@ def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-H
             rank = n - i
             pvalue, index = vals
             new_values.append((n/rank) * pvalue)
-        for i in xrange(0, int(n)-1):
+        for i in range(0, int(n)-1):
             if new_values[i] < new_values[i+1]:
                 new_values[i+1] = new_values[i]
         for i, vals in enumerate(values):
@@ -88,18 +88,14 @@ def filterOutliers(df, group1_list, group2_list, gene_column_name):
     df = df.loc[num_outlier_samps > min_num_outlier_samps, :].reset_index(drop=True)
 
     # Filter for higher proportion of outliers in group1 than group2
-    num_total_psites = pd.DataFrame()
-    for i, col in enumerate(group1_list):
-        num_total_psites[col] = df[group1_outliers[i]] + df[group1_notOutliers[i]]
-    for i, col in enumerate(group2_list):
-        num_total_psites[col] = df[group2_outliers[i]] + df[group2_notOutliers[i]]
 
-    num_total_psites.columns = [x+'_outliers' for x in num_total_psites.columns]
-    frac_outliers = df[group1_outliers+group2_outliers] / num_total_psites
+    group1_outlier_rate = df[group1_outliers].sum(axis=1).divide(df[group1_outliers+group1_notOutliers].sum(axis=1), axis=0)
+    group2_outlier_rate = df[group2_outliers].sum(axis=1).divide(df[group1_outliers+group2_notOutliers].sum(axis=1), axis=0)
+
+    df = df.loc[group1_outlier_rate>group2_outlier_rate, :]
+    frac_outliers = df[group1_outliers+group2_outliers].divide(pd.concat([df[group1_outliers].add(df[group1_notOutliers], axis=0),
+                                                                          df[group2_outliers].add(df[group2_notOutliers], axis=0)], join='inner', axis=1), axis=0)
     frac_outliers[gene_column_name] = df[gene_column_name]
-
-    df = df.loc[frac_outliers[group1_outliers].mean(axis=1) > frac_outliers[group2_outliers].mean(axis=1), :]
-    frac_outliers = frac_outliers.loc[frac_outliers[group1_outliers].mean(axis=1) > frac_outliers[group2_outliers].mean(axis=1), :]
     return df, frac_outliers
 
 def testDifferentGroupsOutliers(group1_list, group2_list, outlier_table):
