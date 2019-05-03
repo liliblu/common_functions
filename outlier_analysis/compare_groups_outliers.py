@@ -234,9 +234,16 @@ if __name__=="__main__":
     else:
         try:
             frac_filter = float(frac_filter)
+            if frac_filter > 1:
+                print('Non-valid frac_filter value')
+                sys.exit()
+            if frac_filter < 0:
+                print('Non-valid frac_filter value')
+                sys.exit()
         except:
             print('Non-valid frac_filter value')
             sys.exit()
+
 
 # Assigning colors to samples
     group_color_map, sample_color_map = assignColors(args.group_colors, group1_label, group2_label, group1, group2)
