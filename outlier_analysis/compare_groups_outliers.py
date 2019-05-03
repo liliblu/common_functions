@@ -75,24 +75,24 @@ def assignColors(group_colors, group1_label, group2_label, group1, group2):
         group_color_map = {group1_label:'#571D41', group2_label:'#F5F5F5'}
     return group_color_map, sample_color_map
 
-def filterOutliers(df, group1_list, group2_list, gene_column_name):
+def filterOutliers(df, group1_list, group2_list, gene_column_name, frac_filter=0.3):
+    if frac_filter!=None:
+        min_num_outlier_samps = len(group1_list)*frac_filter
+        # Filter for 30% of samples having outliers in group1
+        num_outlier_samps = (df[group1_outliers] > 0).sum(axis=1)
+        df = df.loc[num_outlier_samps >= min_num_outlier_samps, :].reset_index(drop=True)
 
-    min_num_outlier_samps = int(len(group1_list)*0.3)
     group1_outliers = [x+'_outliers' for x in group1_list]
     group1_notOutliers = [x+'_notOutliers' for x in group1_list]
     group2_outliers = [x+'_outliers' for x in group2_list]
     group2_notOutliers = [x+'_notOutliers' for x in group2_list]
 
-    # Filter for 30% of samples having outliers in group1
-    num_outlier_samps = (df[group1_outliers] > 0).sum(axis=1)
-    df = df.loc[num_outlier_samps > min_num_outlier_samps, :].reset_index(drop=True)
-
     # Filter for higher proportion of outliers in group1 than group2
-
     group1_outlier_rate = df[group1_outliers].sum(axis=1).divide(df[group1_outliers+group1_notOutliers].sum(axis=1), axis=0)
     group2_outlier_rate = df[group2_outliers].sum(axis=1).divide(df[group1_outliers+group2_notOutliers].sum(axis=1), axis=0)
 
     df = df.loc[group1_outlier_rate>group2_outlier_rate, :]
+
     frac_outliers = df[group1_outliers+group2_outliers].divide(pd.concat([df[group1_outliers].add(df[group1_notOutliers], axis=0),
                                                                           df[group2_outliers].add(df[group2_notOutliers], axis=0)], join='inner', axis=1), axis=0)
     frac_outliers[gene_column_name] = df[gene_column_name]
@@ -210,6 +210,8 @@ if __name__=="__main__":
                         help='Color scale for heatmap')
     parser.add_argument('--output_qvals', type=str, choices=['True', 'False'], default=False,
                         help='Save q-values to a table?')
+    parser.add_argument('--frac_filter', type=str, default=0.3,
+                        help='None or fraction (bn 0-1) of outlier samples in group1 needed per gene')
 
     args = parser.parse_args()
 
@@ -226,6 +228,15 @@ if __name__=="__main__":
         genes_to_highlight = fileToList(genes_to_highlight)
     blue_or_red = args.blue_or_red
     output_qvals = args.output_qvals == 'True'
+    frac_filter = args.frac_filter
+    if frac_filter=='None':
+        frac_filter = None
+    else:
+        try:
+            frac_filter = float(frac_filter)
+        except:
+            print('Non-valid frac_filter value')
+            sys.exit()
 
 # Assigning colors to samples
     group_color_map, sample_color_map = assignColors(args.group_colors, group1_label, group2_label, group1, group2)
