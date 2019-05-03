@@ -75,7 +75,7 @@ def assignColors(group_colors, group1_label, group2_label, group1, group2):
         group_color_map = {group1_label:'#571D41', group2_label:'#F5F5F5'}
     return group_color_map, sample_color_map
 
-def filterOutliers(df, group1_list, group2_list, gene_column_name, frac_filter=0.3):
+def filterOutliers(df, group1_list, group2_list, gene_column_name, frac_filter):
 
     group1_outliers = [x+'_outliers' for x in group1_list]
     group1_notOutliers = [x+'_notOutliers' for x in group1_list]
@@ -92,11 +92,17 @@ def filterOutliers(df, group1_list, group2_list, gene_column_name, frac_filter=0
     group1_outlier_rate = df[group1_outliers].sum(axis=1).divide(df[group1_outliers+group1_notOutliers].sum(axis=1), axis=0)
     group2_outlier_rate = df[group2_outliers].sum(axis=1).divide(df[group1_outliers+group2_notOutliers].sum(axis=1), axis=0)
 
-    df = df.loc[group1_outlier_rate>group2_outlier_rate, :]
+    df = df.loc[group1_outlier_rate>group2_outlier_rate, :].reset_index(drop=True)
 
-    frac_outliers = df[group1_outliers+group2_outliers].divide(pd.concat([df[group1_outliers].add(df[group1_notOutliers], axis=0),
-                                                                          df[group2_outliers].add(df[group2_notOutliers], axis=0)], join='inner', axis=1), axis=0)
+    with np.errstate(divide='ignore',invalid='ignore'):
+        frac_outliers = pd.concat([pd.DataFrame(df[group1_outliers].values/(df[group1_outliers].values+df[group1_notOutliers].values),
+                                                columns=group1_list),
+                                   pd.DataFrame(df[group2_outliers].values/(df[group2_outliers].values+df[group2_notOutliers].values),
+                                                columns=group2_list)],
+                                   axis=1).reset_index(drop=True)
+
     frac_outliers[gene_column_name] = df[gene_column_name]
+
     return df, frac_outliers
 
 def testDifferentGroupsOutliers(group1_list, group2_list, outlier_table):
@@ -250,7 +256,7 @@ if __name__=="__main__":
     group_color_map, sample_color_map = assignColors(args.group_colors, group1_label, group2_label, group1, group2)
 
 # Filter for multiple samples with outliers in group1_list
-    outliers, frac_outliers = filterOutliers(outliers, group1, group2, gene_column_name)
+    outliers, frac_outliers = filterOutliers(outliers, group1, group2, gene_column_name, frac_filter)
     if len(outliers) == 0:
         print("No rows have outliers in 0.3 of %s samples" % (group1_label))
         sys.exit()
@@ -261,15 +267,13 @@ if __name__=="__main__":
     if output_qvals == True:
         outliers[[gene_column_name, 'FDR']].to_csv('%s_comparison_qvals.txt'%output_prefix, sep='\t', index=False)
 
-    outliers['significant'] = (outliers['FDR'] <= fdr_cut_off)
+    outliers['significant'] = (outliers['FDR'] < fdr_cut_off)
     sig_diff_count = sum(outliers['significant'])
     print('%s signficantly differential genes' % sig_diff_count)
 
 #If enough genes, make heatmap
     if sig_diff_count >= 1:
-        outlier_columns = [x+'_outliers' for x in group1]
-        outlier_columns.extend([x+'_outliers' for x in group2])
-        heatmap_table = frac_outliers.loc[(outliers['significant'] == True), [gene_column_name] + outlier_columns]
+        heatmap_table = frac_outliers.loc[(outliers['significant'] == True), [gene_column_name] + group1 + group2]
         heatmap_table = heatmap_table.set_index(gene_column_name)
 
         makeHeatMap(heatmap_table, group_color_map, sample_color_map, group1,
