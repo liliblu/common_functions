@@ -76,16 +76,17 @@ def assignColors(group_colors, group1_label, group2_label, group1, group2):
     return group_color_map, sample_color_map
 
 def filterOutliers(df, group1_list, group2_list, gene_column_name, frac_filter=0.3):
-    if frac_filter!=None:
-        min_num_outlier_samps = len(group1_list)*frac_filter
-        # Filter for 30% of samples having outliers in group1
-        num_outlier_samps = (df[group1_outliers] > 0).sum(axis=1)
-        df = df.loc[num_outlier_samps >= min_num_outlier_samps, :].reset_index(drop=True)
 
     group1_outliers = [x+'_outliers' for x in group1_list]
     group1_notOutliers = [x+'_notOutliers' for x in group1_list]
     group2_outliers = [x+'_outliers' for x in group2_list]
     group2_notOutliers = [x+'_notOutliers' for x in group2_list]
+
+    if frac_filter!=None:
+        min_num_outlier_samps = len(group1_list)*frac_filter
+        # Filter for 30% of samples having outliers in group1
+        num_outlier_samps = (df[group1_outliers] > 0).sum(axis=1)
+        df = df.loc[num_outlier_samps >= min_num_outlier_samps, :].reset_index(drop=True)
 
     # Filter for higher proportion of outliers in group1 than group2
     group1_outlier_rate = df[group1_outliers].sum(axis=1).divide(df[group1_outliers+group1_notOutliers].sum(axis=1), axis=0)
