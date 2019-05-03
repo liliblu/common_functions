@@ -7,6 +7,7 @@ fdr_cut_off=0.05
 genes_to_highlight="genes_of_interest.txt"
 blue_or_red="red"
 output_qvals="True"
+frac_filter="0.3"
 
 output_prefix="test_group1_comparison"
 group1_label="group_of_interest"
@@ -15,7 +16,7 @@ group2_label="not_in_group_of_interest"
 group2_list="test_group2.txt"
 group_colors="test_group_colors.txt"
 
-python2.7  ${location_of_py_file} \
+python3.5  ${location_of_py_file} \
 --outliers_table  ${location_of_outliers_file} \
 --gene_column_name ${gene_column_name} \
 --fdr_cut_off ${fdr_cut_off} \
@@ -27,4 +28,5 @@ python2.7  ${location_of_py_file} \
 --genes_to_highlight ${genes_to_highlight} \
 --blue_or_red ${blue_or_red} \
 --group_colors ${group_colors} \
---output_qvals ${output_qvals}
+--output_qvals ${output_qvals} \
+--frac_filter ${frac_filter}
