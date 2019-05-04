@@ -22,6 +22,7 @@ def calculateGOEnrichment(genes,
     bio_process_go, M = parseGOFile(fil)
     if background_list == None:
         M = len(M)
+        background_list = M
     else:
         M = len(M.intersection(set(background_list)))
 
@@ -29,7 +30,7 @@ def calculateGOEnrichment(genes,
     N = len(genes)
 
     results = pd.DataFrame(columns=['GO_term', 'nGO', 'nOverlap', 'genesCommon'])
-    for go, lis in bio_process_go.iteritems():
+    for go, lis in bio_process_go.items():
         lis = lis.intersection(background_list)
         n = len(lis)
         if n > 0:
