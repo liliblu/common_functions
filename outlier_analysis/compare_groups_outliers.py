@@ -15,9 +15,7 @@ def fileToDict(tsv_map_file_name):
         return {line.split()[0]:line.split()[1] for line in fh.readlines()}
 
 def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-Hochberg"):
-    """
-    consistent with R - print correct_pvalues_for_multiple_testing([0.0, 0.01, 0.029, 0.03, 0.031, 0.05, 0.069, 0.07, 0.071, 0.09, 0.1])
-    """
+
     from numpy import array, empty
     pvalues = array(pvalues)
     n = sum(~np.isnan(pvalues))
@@ -190,6 +188,28 @@ def makeHeatMap(heatmap_table, group_color_map,sample_color_map, group1,
     plt.savefig('%s.pdf' %output_prefix, dpi=500, bbox_inches='tight', pad_inches=0.5)
     return g
 
+def runComparison(outliers, group1, group2,gene_column_name,
+                  fdr_cut_off=0.05, frac_filter=0.3):
+# Filter for multiple samples with outliers in group1_list
+    outliers, frac_outliers = filterOutliers(outliers, group1, group2, gene_column_name, frac_filter)
+    if len(outliers) == 0:
+        print("No rows have outliers in %s of group1 samples" % (frac_filter))
+        sys.exit()
+    print('Testing %s genes for enrichment in group1' %(len(outliers)))
+
+# Doing statistical test on different groups
+    outliers['FDR'] = testDifferentGroupsOutliers(group1, group2, outliers)
+
+    outliers['significant'] = (outliers['FDR'] < fdr_cut_off)
+    sig_diff_count = sum(outliers['significant'])
+    print('%s signficantly differential genes at FDR %s' % (sig_diff_count, fdr_cut_off))
+    return outliers[[gene_column_name, 'FDR']], frac_outliers, sig_diff_count
+
+def writeSigGenesToFile(outliers, gene_column_name, output_prefix, group1_label):
+    sig_genes = outliers.loc[(outliers['significant']==True), gene_column_name]
+    with open('%s.outlier_sites_in_%s.txt' %(output_prefix, group1_label), 'w') as fh:
+        for gene in sig_genes:
+            fh.write('%s\n'%gene)
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Input samples in two groups and df")
@@ -236,6 +256,7 @@ if __name__=="__main__":
     blue_or_red = args.blue_or_red
     output_qvals = args.output_qvals == 'True'
     frac_filter = args.frac_filter
+
     if frac_filter=='None':
         frac_filter = None
     else:
@@ -256,20 +277,10 @@ if __name__=="__main__":
     group_color_map, sample_color_map = assignColors(args.group_colors, group1_label, group2_label, group1, group2)
 
 # Filter for multiple samples with outliers in group1_list
-    outliers, frac_outliers = filterOutliers(outliers, group1, group2, gene_column_name, frac_filter)
-    if len(outliers) == 0:
-        print("No rows have outliers in 0.3 of %s samples" % (group1_label))
-        sys.exit()
-    print('Testing %s genes for enrichment in %s' %(len(outliers), group1_label))
+    outliers, frac_outliers, sig_diff_count = runComparison(outliers, group1, group2, gene_column_name, fdr_cut_off, frac_filter)
 
-# Doing statistical test on different groups
-    outliers['FDR'] = testDifferentGroupsOutliers(group1, group2, outliers)
     if output_qvals == True:
-        outliers[[gene_column_name, 'FDR']].to_csv('%s_comparison_qvals.txt'%output_prefix, sep='\t', index=False)
-
-    outliers['significant'] = (outliers['FDR'] < fdr_cut_off)
-    sig_diff_count = sum(outliers['significant'])
-    print('%s signficantly differential genes' % sig_diff_count)
+        outliers.to_csv('%s_comparison_qvals.txt'%output_prefix, sep='\t', index=False)
 
 #If enough genes, make heatmap
     if sig_diff_count >= 1:
@@ -280,7 +291,4 @@ if __name__=="__main__":
                     output_prefix, blue_or_red, genes_to_highlight)
 
 #Write significantly different genes to a file
-        sig_genes = outliers.loc[(outliers['significant']==True), gene_column_name]
-        with open('%s.outlier_sites_in_%s.txt' %(output_prefix, group1_label), 'w') as fh:
-            for gene in sig_genes:
-                fh.write('%s\n'%gene)
+        writeSigGenesToFile(outliers, gene_column_name, output_prefix, group1_label)

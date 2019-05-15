@@ -82,6 +82,12 @@ def makeFracTable(df, sample_list, gene_column_name):
 
     return frac_outliers
 
+def runOutliers(sample_data, sample_names, gene_column_name, up_or_down, aggregate):
+    sample_data = cleanDF(sample_data, sample_names)
+    outliers = convertToOutliers(sample_data, gene_column_name, sample_names, NUM_IQRs, up_or_down)
+    outliers = countNonNans(outliers, gene_column_name, sample_names, aggregate)
+    return outliers
+
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Parse some arguments")
     parser.add_argument('--input_df', type=str)
@@ -106,11 +112,8 @@ if __name__=="__main__":
 
     sample_data = pd.read_csv(data_input, sep='\t')
     sample_names = [x for x in fileToList(sample_names) if x in sample_data.columns]
-    sample_data = cleanDF(sample_data, sample_names)
-
-    outliers = convertToOutliers(sample_data, gene_column_name, sample_names, NUM_IQRs, up_or_down)
-    outliers = countNonNans(outliers, gene_column_name, sample_names, aggregate)
-
+    outliers = runOutliers(sample_data, sample_names, gene_column_name, sample_names, up_or_down, aggregate)
+    
     if write_frac_table:
         makeFracTable(outliers, sample_names, gene_column_name).to_csv('%s.fraction_outliers.txt' %write_results_to, sep='\t', index=False)
 
