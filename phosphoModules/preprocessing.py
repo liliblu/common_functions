@@ -5,6 +5,7 @@ site_id_sep = '-'
 site_id_col = 'site_id'
 psite_sep = ' '
 numNA_col = 'numNA'
+frac_noNA = 0.5
 
 def collectSites(df):
     gene_sites = {}
@@ -16,11 +17,12 @@ def collectSites(df):
 
 def removeDups(df, gene_col, psite_col, samples):
     gene_sites = collectSites(df)
-    cols = [gene_col, psite_col, site_id_col]
+    cols = [gene_col, psite_col, site_id_col, numNA_col]
     sites_picked_by_na = []
     sites_picked_randomly = []
     sites_unique = []
     df[numNA_col] = df[samples].isnull().sum(axis=1)
+    deduped_phospho = pd.DataFrame()
     for gene, sites in gene_sites.items():
         for site in sites:
             gene_site = gene+site_id_sep+site
@@ -47,20 +49,25 @@ def removeDups(df, gene_col, psite_col, samples):
     deduped_phospho = deduped_phospho.set_index(site_id_col)
     return deduped_phospho
 
-def parseGCT(gct_file, gene_col, psite_col):
-    df = pd.read_csv(gct_file, sep='\t', skiprows=2)
+def parseFilterGCT(gct_file, gene_col, psite_col, samples):
+    df = pd.read_csv(gct_file, sep='\t', skiprows=2, low_memory=False)
     df = df.replace(['na', 'NaN', 'nan', 'NA', 'NAN', 'Nan'],
                     np.nan).dropna(subset=['geneSymbol'], axis=0).astype(float, errors='ignore')
     df[site_id_col] = df[gene_col]+site_id_sep+df[psite_col]
+    df = df.loc[df[samples].isnull().sum(axis=1)<len(samples)*frac_noNA, :]
     return df
 
 def preprocessGCT(gct_file,
-                  samples_file,
+                  samples,
                   gene_col='geneSymbol',
                   psite_col='variableSites',
-                  writeToFile=False):
-    df = parseGCT(gct_file, gene_col, psite_col)
-    df = removeDups(df, gene_col, psite_col, samples)
-    if writeToFile:
-        df.to_csv('preprocessed.'+gct_file, sep='\t', index=False)
+                  writeToFilePrefix=None):
+    try:
+        df = pd.read_csv(writeToFilePrefix+'.preprocessed.txt', sep='\t')
+    except:
+        df = parseFilterGCT(gct_file, gene_col, psite_col, samples)
+        df = removeDups(df, gene_col, psite_col, samples)
+
+    if writeToFilePrefix!=None:
+        df.to_csv(writeToFilePrefix+'.preprocessed.txt', sep='\t', index=False)
     return df

@@ -5,6 +5,7 @@ from sklearn import metrics
 
 true_label_col = 'true_label'
 clusterlabels_col = 'labels'
+
 def parseGMT(gmt_file):
     genesets = {}
     with open(gmt_file, 'r') as fh:
@@ -24,13 +25,9 @@ def evalulateLabelsSilhouette(df, labelDF):
     return score
 
 def filterSTDcorr(df, samples, std):
-    df = df.loc[df[samples].std()>std, samples]
-    corr = df.transpose().corr()
-    return corr
-
-def makeCorr(df, samples, site_id_col='site_id'):
-    df = df.set_index(sit_id_col)
-
+    cut_off = np.nanpercentile(df[samples].std(), 100-std)
+    df = df.loc[df[samples].std()>cut_off, samples]
+    corr = df.transpose().corr().abs()
     return corr
 
 def runHdbscan(corr, nmembers):
@@ -43,11 +40,11 @@ def runHdbscan(corr, nmembers):
     return labels
 
 
-def runThroughParameters(df, samples, gmt_file,
-                         positive_controls=True,
+def runThroughParameters(df, samples, gmt_file=None,
+                         positive_controls=False,
                          std_range=range(5, 40, 5),
                          nmembers_range=range(2, 11)):
-    scores = {}
+    scores = {'adjRand':{}, 'silhouette':{}}
     for std in std_range:
         corr = filterSTD(df, samples, std)
         for nmembers in nmembers_range:
@@ -55,9 +52,8 @@ def runThroughParameters(df, samples, gmt_file,
             labels = runHdbscan(corr, nmembers)
             if positive_controls:
                 genesets = parseGMT(gmt_file)
-                scores[key] = evalutateLabelsRand(labels, genesets)
-            else:
-                scores[key] = evalulateLabelsSilhouette(corr, labels)
-    best_params = max(scores, key=scores.get)
-    
-    return scores, best_params
+                scores['adjRand'][key] = evalutateLabelsRand(labels, genesets)
+            
+            scores['silhouette'][key] = evalulateLabelsSilhouette(corr, labels)
+
+    return scores
