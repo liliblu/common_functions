@@ -8,3 +8,4 @@ test_docs/*
 *.gdoc
 plotly_creds.ipynb
 stacked_heatmap.ipynb
+/*/.idea/*
