@@ -172,10 +172,10 @@ def testDifferentGroupsOutliers(group0_list, group1_list, outlier_table):
     return outlier_table['fisherFDR']
 
 
-def compare_groups_outliers(outliers, annotation_df, frac_filter=0.3):
+def compare_groups_outliers(outliers, annotations, frac_filter=0.3):
     outliers = outliers.transpose()
     results_df = pd.DataFrame(index=outliers.index)
-    for comp in annotation_df.columns:
+    for comp in annotations.columns:
         group0_label, group0, group1_label, group1 = getSampleLists(annotations, comp)
         label0 = '%s_%s_enrichment_FDR' %(comp, group0_label)
         df = filterOutliers(outliers, group0, group1, frac_filter)
@@ -198,24 +198,3 @@ def compare_groups_outliers(outliers, annotation_df, frac_filter=0.3):
             print("No rows had outliers in at least %s of %s %s samples" % (frac_filter, comp, group1_label))
 
     return results_df
-
-
-test_table = np.array([[0, np.nan, 1, 2, 10],
-                      [1, 2, 1, 40, 3],
-                      [0, 2, 50, np.nan, 1],
-                      [0, -2, -3, 45, 90],
-                      [-1, -2, -3, 10, 5]])
-cols = ['A', 'B', 'C', 'D', 'E']
-index = ['test1', 'test2', 'test3', 'test4', 'test5']
-test_table = pd.DataFrame(test_table, columns=cols, index=index).transpose()
-annotations = pd.DataFrame([0, 0, 0, 1, 1], index=cols, columns=['test'])
-
-
-#Running outliers
-#Note--frac_table is useful for visualization but is not used for statistics.
-
-outliers, frac = make_outliers_table(test_table, frac_table=True)
-
-
-results = compare_groups_outliers(outliers, annotations)
-results.head()
