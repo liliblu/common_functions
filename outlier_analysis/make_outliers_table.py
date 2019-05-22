@@ -113,7 +113,7 @@ if __name__=="__main__":
     sample_data = pd.read_csv(data_input, sep='\t')
     sample_names = [x for x in fileToList(sample_names) if x in sample_data.columns]
     outliers = runOutliers(sample_data, sample_names, gene_column_name, sample_names, up_or_down, aggregate)
-    
+
     if write_frac_table:
         makeFracTable(outliers, sample_names, gene_column_name).to_csv('%s.fraction_outliers.txt' %write_results_to, sep='\t', index=False)
 
