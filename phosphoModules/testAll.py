@@ -96,10 +96,14 @@ def parseGMT(gmt_file):
 
 def evalutateLabelsRand(labelsDF, genesets):
     score = 0
+    sets_compared = 0
     for setName, sites in genesets.items():
-        labelsDF[true_label_col] = labelsDF.index.isin(sites)
-        score += metrics.adjusted_rand_score(labelsDF[true_label_col], labelsDF[clusterlabels_col])
-    return score
+        sites = [site.replace('_', '-') for site in sites]
+        if any([site in labelsDF.index for site in sites]):
+            sets_compared += 1
+            labelsDF[true_label_col] = labelsDF.index.isin(sites)
+            score += metrics.adjusted_rand_score(labelsDF[true_label_col], labelsDF[clusterlabels_col])
+    return score, sets_compared
 
 
 def evalulateLabelsSilhouette(df, labelDF):
@@ -137,14 +141,15 @@ def runThroughParameters(df, samples,
 
     scores = pd.DataFrame()
     for std in std_range:
-        corr = filterSTDcorr(df, samples, std)
+        corr = filterSTDcorr(df, samples, std).dropna(how='any', axis=0)
+        corr = corr.reindex(corr.index, axis=1)
         for nmembers in nmembers_range:
-            line = {"nmembers":[nmembers], "std":[std]}
+            line = {"nmembers":[nmembers], "std":[std], "nSites":[len(corr)]}
             labels = runHdbscan(corr, nmembers)
             if positive_controls:
                 genesets = parseGMT(gmt_file)
-                rand = evalutateLabelsRand(labels, genesets)
-                line.update({"adjRand":[rand]})
+                rand, sets_compared = evalutateLabelsRand(labels, genesets)
+                line.update({"adjRand":[rand], "randSetsCompared":[sets_compared]})
 
             silhouette = evalulateLabelsSilhouette(corr, labels)
             line.update({"sillhouette":[silhouette]})
@@ -178,20 +183,5 @@ def optimize(gct_file,
                                   gmt_file=gmt_file,
                                   std_range=std_range,
                                   nmembers_range=nmembers_range)
+
     return scores
-
-
-gctFile = '/Users/lili/dropbox_lili/cptac/brca-prospective/data/raw_data/brca_prosp_v2.1_phosphoproteome-ratio-norm-NArm.gct_site-centric-seqwin_localized_n130x27352.gct'
-samplesFile = '/Users/lili/dropbox_lili/cptac/brca-prospective/data/annotations_rosters/Prot_sample_roster.txt'
-gmtFile = '/Users/lili/ruggles_dropDox/shared-resources/databases/ssGSEA2.0/db/ptmsigdb/ptm.sig.db.all.flanking.human.v1.9.0.gmt'
-writeToFilePrefix = 'brca_pros'
-std_range = [5, 10]
-nmembers_range = range(2, 11)
-
-scores = optimize(gctFile,
-                   samplesFile,
-                   gmt_file=gmtFile,
-                   writeToFilePrefix=writeToFilePrefix,
-                   std_range=std_range,
-                   nmembers_range=nmembers_range)
-print(scores)
