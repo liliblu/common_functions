@@ -5,12 +5,21 @@ from sklearn import metrics
 
 true_label_col = 'true_label'
 clusterlabels_col = 'labels'
+
+gmt_site_sep = '_'
 site_id_sep = '-'
 site_id_col = 'site_id'
 psite_sep = ' '
 numNA_col = 'numNA'
 frac_noNA = 0.5
 
+def parseFilterGCT(gct_file, gene_col, psite_col, samples):
+    df = pd.read_csv(gct_file, sep='\t', skiprows=2, low_memory=False)
+    df = df.replace(['na', 'NaN', 'nan', 'NA', 'NAN', 'Nan'],
+                    np.nan).dropna(subset=['geneSymbol'], axis=0).astype(float, errors='ignore')
+    df[site_id_col] = df[gene_col] + site_id_sep + df[psite_col]
+    df = df.loc[df[samples].isnull().sum(axis=1) < len(samples) * frac_noNA, :]
+    return df
 
 def collectSites(df):
     gene_sites = {}
@@ -21,12 +30,10 @@ def collectSites(df):
     gene_sites = {gene:set(sites) for gene, sites in gene_sites.items()}
     return gene_sites
 
-
 def removeDups(df, gene_col, psite_col, samples):
     gene_sites = collectSites(df)
     cols = [gene_col, psite_col, site_id_col, numNA_col]
     # sites_picked_by_na = []
-    # sites_picked_randomly = []
     # sites_unique = []
     df[numNA_col] = df[samples].isnull().sum(axis=1)
     deduped_phospho = pd.DataFrame()
@@ -40,8 +47,7 @@ def removeDups(df, gene_col, psite_col, samples):
             if len(subset) > 1:
                 subset = subset.loc[subset[numNA_col] == subset[numNA_col].min(), :]
                 if len(subset) > 1:
-                    subset = subset.sample(1)
-                    # sites_picked_randomly.append(gene_site)
+                    subset = subset.groupby(site_id_col).agg(lambda row: row.mean())
                     deduped_phospho = deduped_phospho.append(subset, ignore_index=True)
 
                 elif len(subset) == 1:
@@ -57,14 +63,19 @@ def removeDups(df, gene_col, psite_col, samples):
     return deduped_phospho
 
 
-def parseFilterGCT(gct_file, gene_col, psite_col, samples):
-    df = pd.read_csv(gct_file, sep='\t', skiprows=2, low_memory=False)
-    df = df.replace(['na', 'NaN', 'nan', 'NA', 'NAN', 'Nan'],
-                    np.nan).dropna(subset=['geneSymbol'], axis=0).astype(float, errors='ignore')
-    df[site_id_col] = df[gene_col] + site_id_sep + df[psite_col]
-    df = df.loc[df[samples].isnull().sum(axis=1) < len(samples) * frac_noNA, :]
-    return df
+def processProt(prot, gene_col, samples):
+    return prot.groupby(gene_col)[samples].agg((lambda chunk: chunk.mean(axis=0)))
 
+
+def convertLineToResiduals(ph):
+    nonull = ((ph.isnull() == False) & (test.loc[ph.name[0], :].isnull() == False))
+
+    features = test.loc[ph.name[0], :][nonull].values.reshape(-1, 1)
+    labels = ph[nonull].values
+    model = lm.LinearRegression().fit(features, labels)
+    prediction = model.predict(features)
+    residuals = labels - prediction
+    return pd.Series(residuals, index=nonull[nonull].index)
 
 def preprocessGCT(gct_file,
                   samples,
@@ -87,7 +98,6 @@ def preprocessGCT(gct_file,
 
 
 def parseGMT(gmt_file):
-    genesets = {}
     with open(gmt_file, 'r') as fh:
         genesets = {line.split()[0]: [site.split(':')[0] for site in line.split()[1].split('|')[1:]] for line in
                     fh.readlines()}
@@ -98,7 +108,7 @@ def evalutateLabelsRand(labelsDF, genesets):
     score = 0
     sets_compared = 0
     for setName, sites in genesets.items():
-        sites = [site.replace('_', '-') for site in sites]
+        sites = [site.replace(gmt_site_sep, site_id_sep) for site in sites]
         if any([site in labelsDF.index for site in sites]):
             sets_compared += 1
             labelsDF[true_label_col] = labelsDF.index.isin(sites)
@@ -132,7 +142,10 @@ def runHdbscan(corr, nmembers):
 def runThroughParameters(df, samples,
                          gmt_file: str = None,
                          std_range: list = None,
-                         nmembers_range: list = None) -> dict:
+                         nmembers_range: list = None,
+                         write_labels:bool = False,
+                         writeToFilePrefix: str = None,
+                         ) -> dict:
     positive_controls = not (gmt_file is None)
     if std_range is None:
         std_range = range(5, 40, 5)
@@ -144,8 +157,10 @@ def runThroughParameters(df, samples,
         corr = filterSTDcorr(df, samples, std).dropna(how='any', axis=0)
         corr = corr.reindex(corr.index, axis=1)
         for nmembers in nmembers_range:
-            line = {"nmembers":[nmembers], "std":[std], "nSites":[len(corr)]}
             labels = runHdbscan(corr, nmembers)
+            if write_labels:
+                labels.to_csv(writeToFilePrefix+'_labels_%sstd_%snmem.txt'%(std, nmembers), sep='\t')
+            line = {"nmembers":[nmembers], "std":[std], "nSites":[len(labels)]}
             if positive_controls:
                 genesets = parseGMT(gmt_file)
                 rand, sets_compared = evalutateLabelsRand(labels, genesets)
@@ -165,7 +180,8 @@ def optimize(gct_file,
              psite_col=None,
              writeToFilePrefix=None,
              std_range=None,
-             nmembers_range=None):
+             nmembers_range=None,
+             write_labels=False):
     if std_range is None:
         std_range = range(5, 40, 5)
     if nmembers_range is None:
@@ -182,6 +198,8 @@ def optimize(gct_file,
     scores = runThroughParameters(df, samples,
                                   gmt_file=gmt_file,
                                   std_range=std_range,
-                                  nmembers_range=nmembers_range)
+                                  nmembers_range=nmembers_range,
+                                  write_labels=write_labels,
+                                  writeToFilePrefix=writeToFilePrefix)
 
     return scores

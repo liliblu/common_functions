@@ -23,7 +23,8 @@ if __name__=="__main__":
                               gmt_file=gmtFile,
                               writeToFilePrefix=writeToFilePrefix,
                               std_range=std,
-                              nmembers_range=nmem)
+                              nmembers_range=nmem,
+                              write_labels=True)
 
     output_file = '/gpfs/home/lmb529/ruggleslabHome/phos_corr/brca-prospective/optimization_%s_std.txt' %('.'.join([str(x) for x in std]))
     scores.to_csv(output_file, index=False, sep='\t')
