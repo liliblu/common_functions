@@ -203,7 +203,7 @@ def runComparison(outliers, group1, group2,gene_column_name,
     outliers['significant'] = (outliers['FDR'] < fdr_cut_off)
     sig_diff_count = sum(outliers['significant'])
     print('%s signficantly differential genes at FDR %s' % (sig_diff_count, fdr_cut_off))
-    return outliers[[gene_column_name, 'FDR']], frac_outliers, sig_diff_count
+    return outliers[[gene_column_name, 'FDR', 'significant']], frac_outliers, sig_diff_count
 
 def writeSigGenesToFile(outliers, gene_column_name, output_prefix, group1_label):
     sig_genes = outliers.loc[(outliers['significant']==True), gene_column_name]
@@ -280,7 +280,7 @@ if __name__=="__main__":
     outliers, frac_outliers, sig_diff_count = runComparison(outliers, group1, group2, gene_column_name, fdr_cut_off, frac_filter)
 
     if output_qvals == True:
-        outliers.to_csv('%s_comparison_qvals.txt'%output_prefix, sep='\t', index=False)
+        outliers[[gene_column_name, 'FDR']].to_csv('%s_comparison_qvals.txt'%output_prefix, sep='\t', index=False)
 
 #If enough genes, make heatmap
     if sig_diff_count >= 1:
