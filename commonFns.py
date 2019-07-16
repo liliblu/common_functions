@@ -9,6 +9,8 @@ import scipy.stats
 import catheat
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import pdist
+import sklearn.linear_model as lm
+import warnings
 
 def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-Hochberg"):
     """
@@ -175,3 +177,30 @@ def clustermap(df,
     ax = sns.heatmap(df, **heatmap_kws)
 
     return ax, df
+
+def convertLineToResiduals(ph, prot, alphas=[2**i for i in range(-10, 10, 1)], cv=5):
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    nonull = ((ph.isnull() == False) & (prot.loc[ph.name[0], :].isnull() == False))
+    if sum(nonull) < cv:
+        residuals = np.empty(len(ph))
+        residuals = pd.Series(residuals, index=ph.index)
+    else:
+        features = prot.loc[ph.name[0], :][nonull].values.reshape(-1, 1)
+        labels = ph[nonull].values
+        model = lm.RidgeCV(alphas=alphas, cv=cv, ).fit(features, labels)
+        prediction = model.predict(features)
+        residuals = labels - prediction
+        residuals = pd.Series(residuals, index=ph[nonull].index)
+    return residuals
+
+
+def corrNA(array1, array2):
+    nonull = ((array1.isnull()==False) & (array2.isnull()==False))
+    return scipy.stats.pearsonr(array1[nonull], array2[nonull])
+
+def MAFsampleName(string):
+    string = string.split('_')[0]
+    if 'CPT' in string:
+        return string
+    else:
+        return 'X'+string
