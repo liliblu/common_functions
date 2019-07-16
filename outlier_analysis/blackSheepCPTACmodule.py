@@ -3,9 +3,7 @@ import numpy as np
 import scipy.stats
 
 # Making outliers tables
-
 agg_col = "agg_col"
-
 def convertToOutliers(df, samples, NUM_IQRs, up_or_down):
 
     df['row_iqr'] = scipy.stats.iqr(df[samples], axis=1, nan_policy='omit')
@@ -68,7 +66,6 @@ def make_outliers_table(df, iqrs=1.5, up_or_down='up', aggregate=True, frac_tabl
     samples = df.columns
 
     df = convertToOutliers(df, samples, iqrs, up_or_down)
-
     df = convertToCounts(df, samples, aggregate)
 
     if frac_table:
@@ -179,27 +176,37 @@ def compare_groups_outliers(outliers, annotations, frac_filter=0.3):
     for comp in annotations.columns:
         group0_label, group0, group1_label, group1 = getSampleLists(annotations, comp)
         outlier_samples = [col.split('_')[0] for col in outliers.columns]
+        not_there = ([samp for samp in group0 if not samp in outlier_samples] +
+                     [samp for samp in group1 if not samp in outlier_samples])
+        if len(not_there) > 0:
+            print('Samples %s missing in outlier table, continuing %s without them' %(', '.join(not_there), comp))
+
         group0 = [samp for samp in group0 if samp in outlier_samples]
         group1 = [samp for samp in group1 if samp in outlier_samples]
 
         label0 = '%s_%s_enrichment_FDR' %(comp, group0_label)
-        df = filterOutliers(outliers, group0, group1, frac_filter)
-        if len(df) > 0:
-            print("Testing %s rows for enrichment in %s %s samples" %(len(df), comp, group0_label))
-            col = pd.DataFrame(testDifferentGroupsOutliers(group0, group1, df))
-            col.columns = [label0]
-            results_df = pd.concat([results_df, col], axis=1, join='outer', sort=False)
-        else:
-            print("No rows had outliers in at least %s of %s %s samples" %(frac_filter, comp, group0_label))
+        if ((len(group0)>0)&(len(group1)>0)):
+            df = filterOutliers(outliers, group0, group1, frac_filter)
+            if len(df) > 0:
+                print("Testing %s rows for enrichment in %s %s samples" %(len(df), comp, group0_label))
+                col = pd.DataFrame(testDifferentGroupsOutliers(group0, group1, df))
+                col.columns = [label0]
+                results_df = pd.concat([results_df, col], axis=1, join='outer', sort=False)
+            else:
+                print("No rows had outliers in at least %s of %s %s samples" %(frac_filter, comp, group0_label))
 
-        label1 = '%s_%s_enrichment_FDR' % (comp, group1_label)
-        df = filterOutliers(outliers, group1, group0, frac_filter)
-        if len(df) > 0:
-            print("Testing %s rows for enrichment in %s %s samples" % (len(df), comp, group1_label))
-            col = pd.DataFrame(testDifferentGroupsOutliers(group0, group1, df))
-            col.columns = [label1]
-            results_df = pd.concat([results_df, col], axis=1, join='outer', sort=False)
-        else:
-            print("No rows had outliers in at least %s of %s %s samples" % (frac_filter, comp, group1_label))
-
-    return results_df
+            label1 = '%s_%s_enrichment_FDR' % (comp, group1_label)
+            df = filterOutliers(outliers, group1, group0, frac_filter)
+            if len(df) > 0:
+                print("Testing %s rows for enrichment in %s %s samples" % (len(df), comp, group1_label))
+                col = pd.DataFrame(testDifferentGroupsOutliers(group0, group1, df))
+                col.columns = [label1]
+                results_df = pd.concat([results_df, col], axis=1, join='outer', sort=False)
+            else:
+                print("No rows had outliers in at least %s of %s %s samples" % (frac_filter, comp, group1_label))
+        elif (len(group0)>0):
+            print('No samples from %s in outlier table' %group0_label)
+        elif (len(group1)>0):
+            print('No samples from %s in outlier table' %group1_label)
+    if len(list(results_df)) > 0:
+        return results_df
