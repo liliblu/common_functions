@@ -1,12 +1,12 @@
 import argparse
 import sys
 sys.path.insert(0, '/gpfs/data/ruggleslab/home/lmb529/phos_corr/methods/phosphoModules')
-import testAll
+import clusterOptimize
 
-gctFile = '/gpfs/home/lmb529/ruggleslabHome/phos_corr/brca-prospective/brca_prosp_v2.1_phosphoproteome-ratio-norm-NArm.gct_site-centric-seqwin_localized_n130x27352.gct'
-samplesFile = '/gpfs/home/lmb529/ruggleslabHome/phos_corr/brca-prospective/sample_roster.txt'
+gctFile = '/gpfs/home/lmb529/ruggleslabHome/phos_corr/brca-prospective/normed/prosp-brca-v3.0-phosphoproteome-unfiltered-dedup-prot-normed.txt'
+samplesFile = '/gpfs/home/lmb529/ruggleslabHome/phos_corr/brca-prospective/normed/sample_roster.txt'
 gmtFile = '/gpfs/home/lmb529/ruggleslabHome/phos_corr/positive_controls/ptm.sig.db.all.flanking.human.v1.9.0.gmt'
-writeToFilePrefix = '/gpfs/home/lmb529/ruggleslabHome/phos_corr/brca-prospective/brca_pros'
+writeToFilePrefix = '/gpfs/home/lmb529/ruggleslabHome/phos_corr/brca-prospective/normed/brca_pros_normed'
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Parse some arguments")
@@ -18,10 +18,12 @@ if __name__=="__main__":
     std = args.std
     nmem = args.nmembers
 
-    scores = testAll.optimize(gctFile,
+    scores = clusterOptimize.optimize(gctFile,
                               samplesFile,
                               gmt_file=gmtFile,
                               writeToFilePrefix=writeToFilePrefix,
+                              gene_col='accession_number',
+                              psite_col='variableSites',
                               std_range=std,
                               nmembers_range=nmem,
                               write_labels=True)

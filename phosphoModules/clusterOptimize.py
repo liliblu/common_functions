@@ -1,7 +1,17 @@
 import hdbscan
 import pandas as pd
-import numpy as np
+import parseFilter
+import metrics
 
+true_label_col = 'true_label'
+clusterlabels_col = 'labels'
+
+gmt_site_sep = '_'
+site_id_sep = '-'
+site_id_col = 'site_id'
+psite_sep = ' '
+numNA_col = 'numNA'
+frac_noNA = 0.5
 
 def runHdbscan(corr, nmembers):
     clusterer = hdbscan.HDBSCAN(min_cluster_size=nmembers)
@@ -28,7 +38,7 @@ def runThroughParameters(df, samples,
 
     scores = pd.DataFrame()
     for std in std_range:
-        corr = filterSTDcorr(df, samples, std).dropna(how='any', axis=0)
+        corr = parseFilter.filterSTDcorr(df, samples, std).dropna(how='any', axis=0)
         corr = corr.reindex(corr.index, axis=1)
         for nmembers in nmembers_range:
             labels = runHdbscan(corr, nmembers)
@@ -37,10 +47,10 @@ def runThroughParameters(df, samples,
             line = {"nmembers":[nmembers], "std":[std], "nSites":[len(labels)]}
             if positive_controls:
                 genesets = parseGMT(gmt_file)
-                rand, sets_compared = evalutateLabelsRand(labels, genesets)
+                rand, sets_compared = metrics.evalutateLabelsRand(labels, genesets)
                 line.update({"adjRand":[rand], "randSetsCompared":[sets_compared]})
 
-            silhouette = evalulateLabelsSilhouette(corr, labels)
+            silhouette = metrics.evalulateLabelsSilhouette(corr, labels)
             line.update({"sillhouette":[silhouette]})
             scores = scores.append(pd.DataFrame.from_dict(line), ignore_index=True)
 
@@ -64,7 +74,7 @@ def optimize(gct_file,
     with open(samples_file, 'r') as fh:
         samples = [x.strip() for x in fh.readlines()]
 
-    df = preprocessGCT(gct_file, samples,
+    df = parseFilter.preprocessGCT(gct_file, samples,
                        gene_col=gene_col,
                        psite_col=psite_col,
                        writeToFilePrefix=writeToFilePrefix)

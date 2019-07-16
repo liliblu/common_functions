@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 
+true_label_col = 'true_label'
+clusterlabels_col = 'labels'
+
 gmt_site_sep = '_'
 site_id_sep = '-'
 site_id_col = 'site_id'
@@ -8,11 +11,13 @@ psite_sep = ' '
 numNA_col = 'numNA'
 frac_noNA = 0.5
 
-
 def parseFilterGCT(gct_file, gene_col, psite_col, samples):
-    df = pd.read_csv(gct_file, sep='\t', skiprows=2, low_memory=False)
+    if gct_file[-4:] == '.gct':
+        df = pd.read_csv(gct_file, sep='\t', skiprows=2, low_memory=False)
+    else:
+        df = pd.read_csv(gct_file, sep='\t', low_memory=False)
     df = df.replace(['na', 'NaN', 'nan', 'NA', 'NAN', 'Nan'],
-                    np.nan).dropna(subset=['geneSymbol'], axis=0).astype(float, errors='ignore')
+                    np.nan).dropna(subset=[gene_col], axis=0).astype(float, errors='ignore')
     df[site_id_col] = df[gene_col] + site_id_sep + df[psite_col]
     df = df.loc[df[samples].isnull().sum(axis=1) < len(samples) * frac_noNA, :]
     return df
@@ -55,15 +60,10 @@ def removeDups(df, gene_col, psite_col, samples):
     deduped_phospho = deduped_phospho.set_index(site_id_col)
     return deduped_phospho
 
+def convertLineToResiduals(ph, prot):
+    nonull = ((ph.isnull() == False) & (prot.loc[ph.name[0], :].isnull() == False))
 
-def processProt(prot, gene_col, samples):
-    return prot.groupby(gene_col)[samples].agg((lambda chunk: chunk.mean(axis=0)))
-
-
-def convertLineToResiduals(ph):
-    nonull = ((ph.isnull() == False) & (test.loc[ph.name[0], :].isnull() == False))
-
-    features = test.loc[ph.name[0], :][nonull].values.reshape(-1, 1)
+    features = prot.loc[ph.name[0], :][nonull].values.reshape(-1, 1)
     labels = ph[nonull].values
     model = lm.LinearRegression().fit(features, labels)
     prediction = model.predict(features)
@@ -95,3 +95,9 @@ def parseGMT(gmt_file):
         genesets = {line.split()[0]: [site.split(':')[0] for site in line.split()[1].split('|')[1:]] for line in
                     fh.readlines()}
     return genesets
+
+def filterSTDcorr(df, samples, std):
+    cut_off = np.nanpercentile(df[samples].std(axis=1), 100 - std)
+    df = df.loc[((df[samples].std(axis=1))>cut_off), samples]
+    corr = df.transpose().corr().abs()
+    return corr
