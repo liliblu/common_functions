@@ -3,7 +3,7 @@ import numpy as np
 import scipy.stats
 
 # Making outliers tables
-agg_col = "agg_col"
+
 def convertToOutliers(df, samples, NUM_IQRs, up_or_down):
 
     df['row_iqr'] = scipy.stats.iqr(df[samples], axis=1, nan_policy='omit')
@@ -37,6 +37,7 @@ def convertToCounts(df, samples, aggregate):
     outlier_cols = [x + '_outliers' for x in samples]
 
     if aggregate:
+        agg_col = "gene"
         df[agg_col] = [ind.split('-')[0] for ind in df.index]
         output_df = pd.DataFrame()
         output_df[not_outlier_cols] = df.groupby(by=agg_col)[samples].agg(lambda x: pd.Series(x == 0).sum())
@@ -75,8 +76,7 @@ def make_outliers_table(df, iqrs=1.5, up_or_down='up', aggregate=True, frac_tabl
     return df.transpose()
 
 
-def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-Hochberg"):
-
+def multHypothCorrect(pvalues, correction_type = "Benjamini-Hochberg"):
     from numpy import array, empty
     pvalues = array(pvalues)
     n = sum(~np.isnan(pvalues))
@@ -165,7 +165,7 @@ def testDifferentGroupsOutliers(group0_list, group1_list, outlier_table):
                                                                                     [r['NotOutlier0'],
                                                                                      r['NotOutlier1']]])[1]),axis=1)
 
-    outlier_table['fisherFDR'] = correct_pvalues_for_multiple_testing(list(outlier_table['fisherp']),
+    outlier_table['fisherFDR'] = multHypothCorrect(list(outlier_table['fisherp']),
                                      correction_type = "Benjamini-Hochberg")
     return outlier_table['fisherFDR']
 
@@ -175,6 +175,10 @@ def compare_groups_outliers(outliers, annotations, frac_filter=0.3):
     results_df = pd.DataFrame(index=outliers.index)
     for comp in annotations.columns:
         group0_label, group0, group1_label, group1 = getSampleLists(annotations, comp)
+        if group0_label is None:
+            print('Number of categories in %s is not 2, skipping %s' %(comp, comp))
+            continue
+
         outlier_samples = [col.split('_')[0] for col in outliers.columns]
         not_there = ([samp for samp in group0 if not samp in outlier_samples] +
                      [samp for samp in group1 if not samp in outlier_samples])
@@ -205,8 +209,8 @@ def compare_groups_outliers(outliers, annotations, frac_filter=0.3):
             else:
                 print("No rows had outliers in at least %s of %s %s samples" % (frac_filter, comp, group1_label))
         elif (len(group0)>0):
-            print('No samples from %s in outlier table' %group0_label)
+            print('No samples from %s %s in outlier table' %(comp, group0_label))
         elif (len(group1)>0):
-            print('No samples from %s in outlier table' %group1_label)
+            print('No samples from %s %s in outlier table' %(comp, group1_label))
     if len(list(results_df)) > 0:
         return results_df
