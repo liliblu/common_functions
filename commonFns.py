@@ -1,5 +1,3 @@
-from __future__ import division
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -134,9 +132,9 @@ def makeRankedHeatmaps(input_df, sampsIn, sampsOut, prefix, colors):
 
     return axs
 
-def listToFile(list, file_name):
+def listToFile(lis, file_name):
     with open(file_name, 'w') as fh:
-        for x in list:
+        for x in lis:
             fh.write('%s\n'%x)
 
 def computeOrder(df,
