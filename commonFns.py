@@ -185,7 +185,7 @@ def convertLineToResiduals(ph, prot, alphas=[2**i for i in range(-10, 10, 1)], c
     else:
         features = prot.loc[ph.name[0], :][nonull].values.reshape(-1, 1)
         labels = ph[nonull].values
-        model = lm.RidgeCV(alphas=alphas, cv=cv, ).fit(features, labels)
+        model = lm.RidgeCV(alphas=alphas, cv=cv).fit(features, labels)
         prediction = model.predict(features)
         residuals = labels - prediction
         residuals = pd.Series(residuals, index=ph[nonull].index)
