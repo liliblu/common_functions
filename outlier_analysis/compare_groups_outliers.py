@@ -88,7 +88,7 @@ def filterOutliers(df, group1_list, group2_list, gene_column_name, frac_filter):
 
     # Filter for higher proportion of outliers in group1 than group2
     group1_outlier_rate = df[group1_outliers].sum(axis=1).divide(df[group1_outliers+group1_notOutliers].sum(axis=1), axis=0)
-    group2_outlier_rate = df[group2_outliers].sum(axis=1).divide(df[group1_outliers+group2_notOutliers].sum(axis=1), axis=0)
+    group2_outlier_rate = df[group2_outliers].sum(axis=1).divide(df[group2_outliers+group2_notOutliers].sum(axis=1), axis=0)
 
     df = df.loc[group1_outlier_rate>group2_outlier_rate, :].reset_index(drop=True)
 
