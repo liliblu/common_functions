@@ -1,3 +1,4 @@
+from typing import Optional, Iterable
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,7 +13,6 @@ import warnings
 
 def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-Hochberg"):
     """
-    consistent with R - print correct_pvalues_for_multiple_testing([0.0, 0.01, 0.029, 0.03, 0.031, 0.05, 0.069, 0.07, 0.071, 0.09, 0.1])
     """
     from numpy import array, empty
     pvalues = array(pvalues)
@@ -193,8 +193,12 @@ def convertLineToResiduals(ph, prot, alphas=[2**i for i in range(-10, 10, 1)], c
 
 
 def corrNA(array1, array2):
-    nonull = ((array1.isnull()==False) & (array2.isnull()==False))
+    if isinstance(array1, pd.Series):
+        nonull = ((array1.isna()==False) & (array2.values.isna()==False))
+        return scipy.stats.pearsonr(array1[nonull], array2[nonull])
+    nonull = ((np.isnan(array1)==False) & (np.isnan(array2)==False))
     return scipy.stats.pearsonr(array1[nonull], array2[nonull])
+
 
 def MAFsampleName(string):
     string = string.split('_')[0]
@@ -202,3 +206,47 @@ def MAFsampleName(string):
         return string
     else:
         return 'X'+string
+
+
+def deduplicate_rows(
+    df: pd.DataFrame,
+    samples: Iterable,
+    sequence_col: Optional[str] = 'sequence',
+    maximize_cols: Iterable = ['bestScore', 'Best_scoreVML', 'bestDeltaForwardReverseScore']
+    ) -> pd.DataFrame:
+
+    groupby = df.index.names
+    df = df.reset_index()
+
+    df[maximize_cols] = df[maximize_cols].astype(float)
+    df['numNAs'] = df[samples].isnull().sum(axis=1)
+    if sequence_col:
+        df['len'] = df[sequence_col].str.len()
+        return df.groupby(groupby).apply(lambda row: row.nsmallest(1, columns=['numNAs','len'], keep='all').nlargest(1, columns=maximize_cols, keep='first')).reset_index(level=-1, drop=True)
+    return df.groupby(groupby).apply(lambda row: row.nsmallest(1, columns=['numNAs'], keep='all').nlargest(1, columns=maximize_cols, keep='first')).reset_index(level=-1, drop=True)
+
+
+def parseGCT(
+    filename: str,
+    typ: str = 'phospho',
+    inds: Iterable = ['geneSymbol'],
+    sampleid_row_name: str = 'Sample.ID',
+    writefile: bool = False,
+    output_prefix: Optional[str] = "deduped",
+    **dedup_kws
+    ) -> pd.DataFrame:
+
+    df = pd.read_csv(filename, sep='\t', skiprows=2, low_memory=False).replace(['na', 'NA', 'Na', 'nan', 'NAN', 'NaN', 'Nan'], np.nan)
+    samples = list(df.loc[df[df.columns[0]]==sampleid_row_name, :].dropna(axis=1))[1:]
+
+    df = df.dropna(subset=inds, how='all')
+    df = df.set_index(inds)
+    df[samples] = df[samples].astype(float, errors='ignore')
+
+    if df.index.duplicated().sum() > 0:
+        df = deduplicate_rows(df, samples, **dedup_kws)
+    df = df[samples]
+
+    if writefile:
+        df.to_csv('%s.csv'%output_prefix)
+    return df
